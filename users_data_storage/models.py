@@ -1,33 +1,17 @@
 from django.db import models
 from products_data_storage.models import Product
-import datetime
+from django.contrib.auth.models import User
 
-# Create your models here.
-
-
-class User(models.Model):
-    email = models.CharField(max_length=30)
-    password = models.CharField(max_length=30)
-    datetime_created = models.DateTimeField(auto_now=True)
-    wishlist = models.ManyToManyField(Product)
+class WishlistItem(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishlist")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return f'{self.email}, ${self.datetime_created}'
+        return f'{self.product.name}'
 
-
-class Token(models.Model):
-    expired_datetime = models.DateTimeField()
-    logged_in_as = models.ForeignKey(
-        User, 
-        null=True, 
-        on_delete=models.SET_NULL
-    )
-
-    def is_expired(self) -> bool:
-        return self.expired_datetime > datetime.datetime.now()
 
 class CartItem(models.Model):
-    owner = models.ForeignKey(Token, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="cart")
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField()
 
