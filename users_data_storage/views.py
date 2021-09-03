@@ -1,29 +1,17 @@
-# FIXME: Bug with accessing wishlists.
-#
-# > Expected behaviour: 
-# You get your wishlist when you authentificated and access /users/<your id>/wishlist, but when you 
-# access other users' wishlists (for example, /users/<not your id>/wishlist) you do not receive anything or receive error.
-#
-# > Actual behaviour: 
-# No matter what ID you passed in URL, you still be getting wishlist of user you are logged in. 
-# It means that /users/1/wishlist, /users/2/wishlist, /users/<any id>/wishlist responses with wishlist of user 
-# that you are logged in. 
-
-from users_data_storage.permission import isOwner
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 from rest_framework import generics
-from users_data_storage import serializers, models
+from . import serializers, models, permissions as user_permissions
 from products_data_storage import models as product_models
 from django.contrib.auth.models import User
 
 
 class UserDetail(generics.RetrieveAPIView):
     '''
-    Methods for accessing user's data. Returns serialized User model.
+    Methods for accessing user's data. Returns serialized User model on GET request.
 
     TODO: Rewrite it to skip user's wish list field 
     '''
@@ -34,29 +22,103 @@ class UserDetail(generics.RetrieveAPIView):
 
 
 class Wishlist(generics.ListCreateAPIView):
+    '''
+    Wishlist class is responsible for working with users' wish lists.
+    To work with them via GET or POST request, user must be logged in.
+    You also cannot access others user wish list, so you can get or update wish list of only that user that you're logged in.
+
+    To add new item to user's wish list, you have to send POST request with following schema in the request body:
+
+    {
+        "product_id": <int:product ID>
+    }
+
+    TODO: Create handler for delete method
+    '''
+
     queryset = models.WishlistItem.objects.all()
     serializer_class = serializers.WishlistItemSerializer
-    permission_classes = [permissions.IsAuthenticated, isOwner]
+    permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
     parser_classes = [JSONParser]
 
-    def list(self, request, **args):
-        queryset = self.get_queryset().filter(owner__id=request.user.id) # Send only those wish list items that user owns
+    def list(self, request, user_id):
+        self.check_object_permissions(self.request, user_id)
+        queryset = self.get_queryset().filter(owner__id=user_id)
         serialized = self.serializer_class(queryset, many=True)
         return Response(serialized.data)
 
     def create(self, request, user_id):
+        self.check_object_permissions(self.request, user_id)
+
         try:
-            product_id = request.data["product_id"]
+            product_id = request.data['product_id']
             product = product_models.Product.objects.get(id=product_id)
-            wishlist_item = models.WishlistItem.objects.create(owner=request.user, product=product)
+            wishlist_item = models.WishlistItem(owner=request.user, product=product)
             wishlist_item_serialized = serializers.WishlistItemSerializer(wishlist_item)
             wishlist_item.save()
-            return Response(data=wishlist_item_serialized.data, status=status.HTTP_201_CREATED)
+
+            return Response(wishlist_item_serialized.data)
         except KeyError:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                data={'detail': 'product_id field must be in request body.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except product_models.Product.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                data={'detail': 'Product with this ID was not found.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 # TODO: Create method for accessings users' carts.
-# GET: */users/<user_id>/cart - sends cart items and their count
+# GET: */users/<user_id>/cart - sends cart items and their amount
 # POST: */users/<user_id>/cart - adds list of products to cart (should be authorized as owner of this cart)
+class Cart(generics.ListCreateAPIView):
+    '''
+    Cart class is responsible for working with users' carts.
+    To work with them via GET or POST request, user must be logged in.
+    You also cannot access other user cart, so you can get or update cart of only that user that you're logged in.
+
+    To add new item to user's cart, you have to send POST request with following schema in the request body:
+    
+    {
+        "product_id": <int:product ID>,
+        "amount": <int>
+    }
+
+    TODO: Create handler for delete method
+    '''
+
+    queryset = models.CartItem.objects.all()
+    serializer_class = serializers.CartItemSerializer
+    permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
+    parser_classes = [JSONParser]
+
+    def list(self, request, user_id):
+        self.check_object_permissions(self.request, user_id)
+        queryset = self.get_queryset().filter(owner__id=user_id)
+        serialized = self.serializer_class(queryset, many=True)
+        return Response(serialized.data)
+
+    def create(self, request, user_id):
+        self.check_object_permissions(self.request, user_id)
+
+        try:
+            product_id = request.data['product_id']
+            amount = request.data['amount']
+            product = product_models.Product.objects.get(id=product_id)
+            cart_item = models.CartItem(owner=request.user, product=product, amount=amount)
+            cart_item_serialized = serializers.CartItemSerializer(cart_item)
+            cart_item.save()
+
+            return Response(cart_item_serialized.data)
+        except KeyError:
+            return Response(
+                data={'detail': 'product_id and amount fields must be in request body.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except product_models.Product.DoesNotExist:
+            return Response(
+                data={'detail': 'Product with this ID was not found.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )

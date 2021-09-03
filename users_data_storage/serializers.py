@@ -1,9 +1,5 @@
-# from django.contrib.auth.models import User
-# from users_data_storage import models, serializers
-
-from rest_framework.relations import SlugRelatedField
 from products_data_storage.serializers import ProductSerializer
-from users_data_storage import models
+from . import models
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
