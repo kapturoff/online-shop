@@ -37,7 +37,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         for item in raw_items:
             product = Product.objects.get(id=item['product']['id'])
-            final_cost += product.price
+            final_cost += round(product.price * item['amount'], 2)
             items.append({'product': product, 'amount': item['amount']})
 
         if not len(raw_items): raise IndexError('Field \'items\' must contain at least one product.')

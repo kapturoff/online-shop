@@ -8,6 +8,9 @@ DEFAULT_ORDER_STATUS_ID = 1 # ID of status "Created"
 class OrderStatus(models.Model):
     name = models.CharField(max_length=20)
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Order(models.Model):
     customer = models.ForeignKey(
