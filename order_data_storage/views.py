@@ -2,11 +2,12 @@ from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
+from .permissions import IsOwnerOrAdmin
 from .serializers import OrderSerializer
 from .models import Order
 from products_data_storage.models import Product
 
-class Order(generics.CreateAPIView):
+class OrderCreator(generics.CreateAPIView):
     '''
     This class is responsible for work with creating of the orders.
     To create order, you need to send POST request to /order endpoint with following schema in request body:
@@ -62,3 +63,16 @@ class Order(generics.CreateAPIView):
                 data={'detail': str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class OrderDetail(generics.RetrieveAPIView):
+    '''
+    This class is responsible for /order/<order_id> endpoint. It responses with order details on GET requests.
+    To get these details you must be logged in as customer of this order or as an admin.
+    '''
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    parser_classes = [JSONParser]
+    renderer_classes = [JSONRenderer]
+    lookup_url_kwarg = 'order_id'
+    permission_classes = [IsOwnerOrAdmin]
