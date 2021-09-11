@@ -42,9 +42,29 @@ class OrderItem(models.Model):
         return f'{self.product.name}, {self.order}'
 
 
-class Transaction(models.Model):
+class Payment(models.Model):
+    '''
+    Since this project is just an example of online shop API, any payment service will not be used here.
+    The goal of this project is emulating of the work of the real online shop and this is why this model is placed here. 
+    This model helps with imitating the working with the payment service.
+    '''
+
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    paid_amount = models.FloatField()
+
+    '''
+    In the next variable will be storing the URL to locale endpoint for approving a payment (/payment/<order_id>).
+    In real project here should be stored an URL to the payment page of the payment service.
+    '''
+    redirect_url = models.URLField()
+
+    '''
+    The secret key is simple way of confirming the authenticity of the incoming request.
+    It's responsible for the helping to defend against the attacks based on the fake notifications.
+
+    As this is just an example of an online shop, the Payment API is going to send this secret key. In case
+    of a real online shop it absolutely must not do this.
+    '''
+    secret_key = models.UUIDField()
 
     def __str__(self) -> str:
-        return f'{self.order}, +{self.paid_amount}$'
+        return f'{self.redirect_url}'

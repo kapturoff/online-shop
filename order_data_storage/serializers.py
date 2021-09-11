@@ -2,7 +2,8 @@ from products_data_storage.models import Product
 from users_data_storage.serializers import UserSerializer
 from products_data_storage.serializers import ProductSerializer
 from rest_framework import serializers
-from order_data_storage import models
+from . import models
+from uuid import uuid4
 
 
 class OrderStatusSerializer(serializers.ModelSerializer):
@@ -71,9 +72,15 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 
-class TransactionSerializer(serializers.ModelSerializer):
+class PaymentSerializer(serializers.ModelSerializer):
     order = OrderSerializer()
 
+    def create(order_id):
+        order = models.Order.objects.get(id=order_id)
+        url = f'/payment/{order.id}'
+        secret_key = uuid4()
+        return models.Payment(order=order, redirect_url=url, secret_key=secret_key)
+
     class Meta:
-        model = models.Transaction
-        fields = '__any__'
+        model = models.Payment
+        fields = '__all__'
