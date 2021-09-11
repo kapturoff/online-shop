@@ -5,6 +5,7 @@ from products_data_storage.models import Product
 
 DEFAULT_ORDER_STATUS_ID = 1 # ID of status "Created"
 
+
 class OrderStatus(models.Model):
     name = models.CharField(max_length=20)
 
@@ -15,8 +16,7 @@ class OrderStatus(models.Model):
 class Order(models.Model):
     customer = models.ForeignKey(
         User, 
-        null=True, 
-        on_delete=models.SET_NULL,
+        on_delete=models.RESTRICT,
     )
     final_cost = models.FloatField()
     created = models.DateTimeField(auto_now=True)
@@ -39,7 +39,7 @@ class OrderItem(models.Model):
     amount = models.PositiveSmallIntegerField()
 
     def __str__(self) -> str:
-        return f'{self.product.name}, {self.order}'
+        return f'{self.product.color} {self.product.name}, {self.amount} pieces'
 
 
 class Payment(models.Model):
