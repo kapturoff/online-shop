@@ -2,8 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from products_data_storage.models import Product
 
-
-DEFAULT_ORDER_STATUS_ID = 1 # ID of status "Created"
+DEFAULT_ORDER_STATUS_ID = 1  # ID of status "Created"
 
 
 class OrderStatus(models.Model):
@@ -15,14 +14,16 @@ class OrderStatus(models.Model):
 
 class Order(models.Model):
     customer = models.ForeignKey(
-        User, 
-        on_delete=models.RESTRICT,
+        User,
+        on_delete=models.CASCADE,
     )
     final_cost = models.FloatField()
     created = models.DateTimeField(auto_now=True)
-    status = models.ForeignKey(OrderStatus, default=DEFAULT_ORDER_STATUS_ID, on_delete=models.RESTRICT)
+    status = models.ForeignKey(
+        OrderStatus, default=DEFAULT_ORDER_STATUS_ID, on_delete=models.RESTRICT
+    )
 
-    # TODO: Create seperated model for addresses
+    # TODO: Create seperate models for addresses
     address_to_send = models.CharField(max_length=100)
     email = models.CharField(max_length=50)
     first_name = models.CharField(max_length=20)
@@ -34,7 +35,9 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="items"
+    )
     product = models.ForeignKey(Product, on_delete=models.RESTRICT)
     amount = models.PositiveSmallIntegerField()
 
@@ -51,20 +54,24 @@ class Payment(models.Model):
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
+    payment_page_url = models.URLField(blank=True, null=True)
     '''
-    In the next variable will be storing the URL to locale endpoint for approving a payment (/payment/<order_id>).
-    In real project here should be stored an URL to the payment page of the payment service.
+    In the next variable will be stored an URL to locale endpoint (/payment/<payment_service_id>) which refers to 
+    the fake payment service. In a real online shop here should be stored an URL to the payment page of the payment service.
     '''
-    redirect_url = models.URLField()
 
+    payment_service_id = models.UUIDField(blank=True, null=True)
     '''
-    The secret key is simple way of confirming the authenticity of the incoming request.
+    Here we're going to store an ID of the order on the payment service side.
+    '''
+
+    secret_key = models.UUIDField()
+    '''
+    The secret key is simple approach to confirm the authenticity of the incoming request.
     It's responsible for the helping to defend against the attacks based on the fake notifications.
 
     As this is just an example of an online shop, the Payment API is going to send this secret key. In case
     of a real online shop it absolutely must not do this.
     '''
-    secret_key = models.UUIDField()
-
     def __str__(self) -> str:
-        return f'{self.redirect_url}'
+        return f'{self.payment_page_url}'
