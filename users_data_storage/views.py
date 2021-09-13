@@ -11,14 +11,21 @@ from django.contrib.auth.models import User
 
 class UserDetail(generics.RetrieveAPIView):
     '''
-    Methods for accessing user's data. Returns serialized User model on GET request.
-
-    TODO: Rewrite it to skip user's wish list field 
+    Class that responsible for accessing user's data. Returns serialized User model on GET request.
     '''
     queryset = User.objects.all()
     serializer_class = serializers.UserSerializer
     renderer_classes = [JSONRenderer]
     lookup_url_kwarg = 'user_id'
+
+
+class UserRegister(generics.CreateAPIView):
+    '''
+    Class that responsible for creating of new user. 
+    '''
+    queryset = User.objects.all()
+    serializer_class = serializers.RegisterSerializer
+    renderer_classes = [JSONRenderer]
 
 
 class Wishlist(generics.ListCreateAPIView):
@@ -33,9 +40,8 @@ class Wishlist(generics.ListCreateAPIView):
         "product_id": <int:product ID>
     }
 
-    TODO: Create handler for delete method
+    TODO: Create handler for delete method (#552068c1)
     '''
-
     queryset = models.WishlistItem.objects.all()
     serializer_class = serializers.WishlistItemSerializer
     permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
@@ -53,19 +59,26 @@ class Wishlist(generics.ListCreateAPIView):
         try:
             product_id = request.data['product_id']
             product = product_models.Product.objects.get(id=product_id)
-            wishlist_item = models.WishlistItem(owner=request.user, product=product)
-            wishlist_item_serialized = serializers.WishlistItemSerializer(wishlist_item)
+            wishlist_item = models.WishlistItem(
+                owner=request.user, product=product
+            )
+            wishlist_item_serialized = serializers.WishlistItemSerializer(
+                wishlist_item
+            )
+
             wishlist_item.save()
 
             return Response(wishlist_item_serialized.data)
         except KeyError:
             return Response(
-                data={'detail': 'product_id field must be in request body.'}, 
+                data={
+                    'detail': 'product_id field must be in the request body.'
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         except product_models.Product.DoesNotExist:
             return Response(
-                data={'detail': 'Product with this ID was not found.'}, 
+                data={'detail': f'Product with ID {user_id} was not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -107,18 +120,23 @@ class Cart(generics.ListCreateAPIView):
             product_id = request.data['product_id']
             amount = request.data['amount']
             product = product_models.Product.objects.get(id=product_id)
-            cart_item = models.CartItem(owner=request.user, product=product, amount=amount)
+            cart_item = models.CartItem(
+                owner=request.user, product=product, amount=amount
+            )
             cart_item_serialized = serializers.CartItemSerializer(cart_item)
             cart_item.save()
 
             return Response(cart_item_serialized.data)
         except KeyError:
             return Response(
-                data={'detail': 'product_id and amount fields must be in request body.'}, 
+                data={
+                    'detail':
+                        'product_id and amount fields must be in request body.'
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         except product_models.Product.DoesNotExist:
             return Response(
-                data={'detail': 'Product with this ID was not found.'}, 
+                data={'detail': 'Product with this ID was not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
