@@ -3,9 +3,9 @@ Backend of online shop
 
 ## Installation
 
-Before starting the project you need to make sure that you have installed _Python 3.9_, its packet manager _pip_ and _pyvenv_ for working with virtual environments.
+Before starting the project you need to make sure that you have installed _Python 3.9_, its package manager _pip_ and _pyvenv_ for working with the virtual environments.
 
-Let's start with the installing of this project requirements. This is recommended to create virual environment first, activate it and only then install dependencies.
+Let's start with the installing of this project requirements. This is recommended to create virual environment first, then activate it and only then install dependencies of project.
 
 ```
 python -m venv env
@@ -13,13 +13,13 @@ source env/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-After this, you need to create a new database for your instance of the online shop, which will store its data.
+After this, you need to create a new database for your instance of the online shop, which will store shop data.
 
 ```shell
 python manage.py migrate
 ```
 
-Create superuser to access the admin site via him.
+Then create superuser to access the admin site via him.
 
 ```
 python manage.py createsuperuser
@@ -33,17 +33,17 @@ python manage.py runserver
 
 ## Testing API
 
-> All the examples use _curl_ to transfer data via terminal. I also assume that you put all the information for the request in the _"request_data.json"_ file in the directory from which you are working with curl.
+> All the examples use _curl_ to transfer data via terminal. I also assume that you put all the data for the request body in the _"request_data.json"_ file that is in the directory from which you are working with curl.
 
 
 ### Accessing admin site
-The admin panel of Django is the HTML page, so you access it from browser. It's placed on _/admin_ endpoint. 
+The admin panel of Django is the HTML page, so you access it using the browser. It's placed on _/admin_ endpoint. 
 
 You can use the admin panel to add new products or categories to shop and also manage the users' data.
 
 
-### Registering new users
-You can register new user by sending POST request to _/register_
+### Registering of the new users
+You can register new user by sending POST request to _/register_ endpoint.
 
 Request body must contain:
 ```python
@@ -61,7 +61,7 @@ curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X PO
 
 Returns: ```User```
 
-After it, you can get data of user by passing his ID as request parameter like this — _/users/<user_id>_
+After user registered, you can get data of his profile by passing his ID as request parameter like this — _/users/<user_id>_
 
 Example of request:
 ```
@@ -98,7 +98,7 @@ Example of request:
 curl -H 'Content-Type: application/json; indent=4' -X GET http://localhost:8000/categories/pants
 ```
 
-Returns: ```Product```
+Returns: ```Product[]```
 
 Product model contains the following fields:
 ```python
@@ -129,7 +129,7 @@ Returns: ```Product```
 
 ### Working with users' wish lists
 You can get your wish list by accessing _/user/<your_user_id>/wishlist_ by GET request. 
-If you try access someone else's wish list, you get Permission denied error. For this reason you need be authenticated to access wish list.
+If you try to access someone else's wish list, you get Permission denied error. For this reason you need be authenticated to access wish list.
 
 Example of request: 
 ```
@@ -182,7 +182,7 @@ Returns: ```CartItem```
 
 
 ### Making purchases
-To buy some products, you need to send POST request to _/order_ endpoint. Request body of this request should contain Order model data.
+To create an order, you need to send the POST request to _/order_ endpoint. Request body of this request should contain Order model data.
 
 Order model contains these fields:
 ```python
@@ -204,11 +204,11 @@ curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H 'Content-T
 
 Returns: ```Order```
 
-After it, you need to pay for your order. Since the project does not use any real payment service, I emulated the behavior of online shop as if it were using it. That means that you have to get a link to the third-party payment service page first, then follow this link and, if you paid successfully, the payment service would have to send notification to online shop about successful payment.
+After it, you need to pay for your order. Since the project does not use any real payment service, I imitated a behavior of online shop as if it were using it. That means that you still have to get a link to the third-party payment service page first, then follow this link and, if you paid successfully, the payment service would have to send notification to online shop about a successful payment.
 
-The only differences with my implementation of a payment service are that you need send this notification to our API manually and that you do not really need to spend money while testing :)
+The only differences with my implementation of a payment service are that you need to send this notification to our API manually and that you do not really need to spend money while testing it :)
 
-First of all, get the payment details and link from online shop API. Pass an order ID that you had got from the previous request as a paremeter in _/order/<order_id>/pay_:
+First of all, get the payment details and link from online shop API. Pass an order ID that you had got from the previous request as a parameter in _/order/<order_id>/pay_:
 ```
 curl -u my_username:my_ultra_hard_password -H "Content-Type: application/json; indent=4" -X GET http://localhost:8000/order/4/pay
 ```
@@ -227,7 +227,7 @@ Payment fields are:
 
 You actually can visit the payment page URL, but you will not see anything but a placeholder
 
-Then you have to send notification to API of the shop as if you were a third-party payment service. Since we haven't got a list of IPs of payment service, the shop checks the authenticity of payment by comparing the secret key of order stored in our database and secret key that third-party service sends. That is why you see secret key in the previous request.
+Then you have to send notification to API of the shop as if you were a third-party payment service. Since we haven't got a list of IPs of payment service, the shop checks the authenticity of payment by the comparing of the secret key of order stored in our database and secret key that third-party service sends. This is why you see secret key in the previous request.
 
 Body of the next request must contain:
 ```python
@@ -240,6 +240,11 @@ Body of the next request must contain:
 }
 ```
 
+Example of request:
+```
+curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X POST "http://localhost:8000/webhooks"
+```
+
 Returns: ```Order```
 
-After all of these manipulations, order finally gets his status «Paid»!
+After all of these manipulations, order finally gets his status «Paid»! You can verify that by visiting the admin site.
