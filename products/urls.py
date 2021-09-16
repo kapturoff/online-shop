@@ -1,5 +1,5 @@
 from django.urls import path
-from products_data_storage import views
+from . import views
 
 urlpatterns = [
     # path('snippets/', views.snippet_list),

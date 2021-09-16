@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from products_data_storage import models
+from . import models
 
 
 class CategorySerializer(serializers.ModelSerializer):

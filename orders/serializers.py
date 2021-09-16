@@ -1,8 +1,8 @@
-from products_data_storage.models import Product
-from users_data_storage.serializers import UserSerializer
-from products_data_storage.serializers import ProductSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from products.models import Product
+from products.serializers import ProductSerializer
+from users.serializers import UserSerializer
 from . import models
 from uuid import uuid4
 

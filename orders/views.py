@@ -1,5 +1,4 @@
 from rest_framework import status, generics
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
@@ -9,7 +8,7 @@ from .permissions import IsOrderOwnerOrAdmin, IsPaymentOwnerOrAdmin
 from .models import Order, Payment, OrderStatus
 from .serializers import OrderSerializer
 from .helpers import call_payment_service_api, decrease_products_amount
-from products_data_storage.models import Product
+from products.models import Product
 
 
 class OrderCreator(generics.CreateAPIView):

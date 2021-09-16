@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from products_data_storage.models import Product
+from products.models import Product
 
 DEFAULT_ORDER_STATUS_ID = 1  # ID of status "Created"
 

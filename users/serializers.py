@@ -1,4 +1,4 @@
-from products_data_storage.serializers import ProductSerializer
+from products.serializers import ProductSerializer
 from . import models
 from rest_framework import serializers
 from django.contrib.auth.models import User

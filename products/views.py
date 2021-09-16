@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
-from products_data_storage import models, serializers
+from . import models, serializers
 
 
 @api_view(['GET'])

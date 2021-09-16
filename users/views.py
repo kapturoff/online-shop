@@ -1,11 +1,9 @@
-from rest_framework import status
 from rest_framework.response import Response
-from rest_framework import permissions
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
-from rest_framework import generics
+from rest_framework import status, permissions, generics
 from . import serializers, models, permissions as user_permissions
-from products_data_storage import models as product_models
+from products import models as product_models
 from django.contrib.auth.models import User
 
 
