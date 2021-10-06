@@ -36,26 +36,30 @@ class OrderSerializer(serializers.ModelSerializer):
         use this iteration to kill two birds with one stone.
         '''
 
-        raw_items = data['items']
+        # If list of items for the new order is empty, throw an error.
+        if not len(data['items']):
+            raise ValidationError(
+                'Field \'items\' must contain at least one product.'
+            )
+
         items = []
+        items_IDs = list(map(lambda item: item['product']['id'], data['items']))
+        products = Product.objects.filter(id__in=items_IDs)
         final_cost = 0.0
 
-        for item in raw_items:
-            product = Product.objects.get(id=item['product']['id'])
+        for product in products:
+            # Finding back the item user sent for combinging it with the product in the database.
+            item = next(x for x in data['items'] if x['product']['id'] == product.id)
 
-            # Here we must check that an user cannot buy more products than is available in the database.
+            # Here we must check that the user cannot buy more products than is available in the database.
             if (product.amount_remaining < item['amount']):
                 raise ValidationError(
                     f'The quantity of product with ID {product.id} is not enough to add this amount to the order.'
                 )
 
-            final_cost += round(product.price * item['amount'], 2)
+            # Since the product price is DecimalField it must be explicitly converted
+            final_cost += round(float(product.price) * item['amount'], 2)
             items.append({'product': product, 'amount': item['amount']})
-
-        if not len(raw_items):
-            raise ValidationError(
-                'Field \'items\' must contain at least one product.'
-            )
 
         order = models.Order(
             customer=customer,
@@ -74,7 +78,7 @@ class OrderSerializer(serializers.ModelSerializer):
         need of first iteration because of we were summarizing final cost of whole order (and order
         cannot be created without final_cost field)
         
-        TODO: Rewrite final cost field as getter in Order model to avoid it.
+        TODO: Rewrite final cost field as getter in Order model to avoid it (#e3eae90a)
         '''
         for item in items:
             order_item = models.OrderItem(
