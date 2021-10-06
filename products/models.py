@@ -11,7 +11,7 @@ class Category(models.Model):
 class Product(models.Model):
     img = models.URLField(null=True)
     name = models.CharField(max_length=32)
-    price = models.FloatField()
+    price = models.DecimalField(decimal_places=2, max_digits=7)
     old_price = models.FloatField(null=True)
     amount_remaining = models.PositiveSmallIntegerField()
     description = models.TextField(max_length=1000)
@@ -32,7 +32,7 @@ class Product(models.Model):
 class Review(models.Model):
     author_name = models.CharField(max_length=32)
     review_text = models.TextField(max_length=1000)
-    like = models.BooleanField()
+    liked = models.BooleanField()
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
