@@ -6,7 +6,7 @@ DEFAULT_ORDER_STATUS_ID = 1  # ID of status "Created"
 
 
 class OrderStatus(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=16)
 
     def __str__(self) -> str:
         return self.name
@@ -24,11 +24,11 @@ class Order(models.Model):
     )
 
     # TODO: Create seperate models for addresses
-    address_to_send = models.CharField(max_length=100)
-    email = models.CharField(max_length=50)
-    first_name = models.CharField(max_length=20)
-    last_name = models.CharField(max_length=20)
-    mobile_number = models.CharField(max_length=20)
+    address_to_send = models.CharField(max_length=128)
+    email = models.CharField(max_length=32)
+    first_name = models.CharField(max_length=32)
+    last_name = models.CharField(max_length=32)
+    mobile_number = models.CharField(max_length=16)
 
     def __str__(self) -> str:
         return f'{self.customer} {self.created}'
