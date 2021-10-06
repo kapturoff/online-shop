@@ -22,6 +22,14 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ProductListSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True)
+
+    class Meta:
+        model = models.Category
+        fields = "__all__"
+
+
 class Review(serializers.ModelSerializer):
     product = ProductSerializer()
 

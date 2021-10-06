@@ -19,6 +19,7 @@ class Product(models.Model):
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
+        related_name='products',
     )
 
     # TODO: Create seperated models for next two fields (#a36f5667)

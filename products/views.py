@@ -1,50 +1,39 @@
-# TODO: Recreate these views using class based views.
-
 # TODO: Make it sending reviews with the product data
 
-from rest_framework import status
-from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.response import Response
+from rest_framework import generics
 from rest_framework.renderers import JSONRenderer
-from . import models, serializers
+from .models import Category, Product
+from .serializers import CategorySerializer, ProductListSerializer, ProductSerializer
 
 
-@api_view(['GET'])
-@renderer_classes([JSONRenderer])
-def categories(request):
-    # If this function receives GET request, it sends list of all existing categories
-    categories = models.Category.objects.all()
-    categories_serialized = serializers.CategorySerializer(
-        categories, many=True
-    )
-
-    return Response(categories_serialized.data)
+class Categories(generics.ListAPIView):
+    '''
+    This class is responsible for /categories endpoint. Returns a list of the all categories
+    '''
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    renderer_classes = [JSONRenderer]
 
 
-@api_view(['GET'])
-@renderer_classes([JSONRenderer])
-def category(request, category_name):
-    # If this function receives GET request, it sends list of all products in category
-    try:
-        category = models.Category.objects.get(name=category_name)
-        products = category.product_set.all()
-        products_serialized = serializers.ProductSerializer(products, many=True)
-        return Response(
-            data=products_serialized.data, status=status.HTTP_200_OK
+class CategoryDetails(generics.RetrieveAPIView):
+    ''''
+    This class is responsible for /categories/<category_name> endpoint. Returns details of an certaion category
+    '''
+    queryset = Category.objects.all()
+    serializer_class = ProductListSerializer
+    renderer_classes = [JSONRenderer]
+    lookup_url_kwarg = 'category_name'
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        obj = generics.get_object_or_404(
+            queryset, name=self.kwargs['category_name']
         )
-    except models.Category.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        return obj
 
 
-@api_view(['GET'])
-@renderer_classes([JSONRenderer])
-def product(request, category_name, product_id):
-    # This funciton only returns product data if it founds it in database
-    try:
-        product = models.Product.objects.get(
-            category__name=category_name, id=product_id
-        )
-        product_serialized = serializers.ProductSerializer(product)
-        return Response(product_serialized.data, status=status.HTTP_200_OK)
-    except models.Product.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class ProductDetails(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    renderer_classes = [JSONRenderer]
+    lookup_url_kwarg = 'product_id'
