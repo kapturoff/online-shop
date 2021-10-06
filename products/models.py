@@ -1,6 +1,5 @@
 from django.db import models
 
-# Create your models here.
 
 class Category(models.Model):
     name = models.CharField(max_length=32, null=True)
@@ -10,7 +9,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    link_to_image = models.URLField(null=True) # Can be an another model for different sizes
+    img = models.URLField(null=True)
     name = models.CharField(max_length=32)
     price = models.FloatField()
     old_price = models.FloatField(null=True)
@@ -22,7 +21,7 @@ class Product(models.Model):
         on_delete=models.CASCADE,
     )
 
-    # Create seperated models for next two fields
+    # TODO: Create seperated models for next two fields (#a36f5667)
     size = models.CharField(max_length=16)
     color = models.CharField(max_length=32)
 
