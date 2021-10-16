@@ -1,4 +1,4 @@
-# TODO: Make it sending reviews with the product data
+# TODO: Make it sending reviews with the product data (#95535bf4)
 
 from rest_framework import generics
 from rest_framework.renderers import JSONRenderer
@@ -17,7 +17,8 @@ class Categories(generics.ListAPIView):
 
 class CategoryDetails(generics.RetrieveAPIView):
     ''''
-    This class is responsible for /categories/<category_name> endpoint. Returns details of an certaion category
+    This class is responsible for /categories/<category_name> endpoint. Returns details of an certain category including a 
+    list of all its items
     '''
     queryset = Category.objects.all()
     serializer_class = ProductListSerializer
