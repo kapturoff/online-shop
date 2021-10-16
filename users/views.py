@@ -1,7 +1,8 @@
+from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
-from rest_framework import status, permissions, generics
+from rest_framework import permissions, generics
 from . import serializers, models, permissions as user_permissions
 from products import models as product_models
 from django.contrib.auth.models import User
@@ -68,22 +69,13 @@ class Wishlist(generics.ListCreateAPIView):
 
             return Response(wishlist_item_serialized.data)
         except KeyError:
-            return Response(
-                data={
-                    'detail': 'product_id field must be in the request body.'
-                },
-                status=status.HTTP_400_BAD_REQUEST
+            raise ParseError(
+                'product_id field must be in the request body', 'invalid_data'
             )
         except product_models.Product.DoesNotExist:
-            return Response(
-                data={'detail': f'Product with ID {user_id} was not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFound('product_id was not found', 'not_found')
 
 
-# TODO: Create method for accessings users' carts.
-# GET: */users/<user_id>/cart - sends cart items and their amount
-# POST: */users/<user_id>/cart - adds list of products to cart (should be authorized as owner of this cart)
 class Cart(generics.ListCreateAPIView):
     '''
     Cart class is responsible for working with users' carts.
@@ -126,15 +118,9 @@ class Cart(generics.ListCreateAPIView):
 
             return Response(cart_item_serialized.data)
         except KeyError:
-            return Response(
-                data={
-                    'detail':
-                        'product_id and amount fields must be in request body.'
-                },
-                status=status.HTTP_400_BAD_REQUEST
+            raise ParseError(
+                '"product_id" and "amount" fields must be in request body.',
+                'invalid_data'
             )
         except product_models.Product.DoesNotExist:
-            return Response(
-                data={'detail': 'Product with this ID was not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFound('Product with this ID was not found.', 'not_found')
