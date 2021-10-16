@@ -45,16 +45,15 @@ class Wishlist(generics.ListCreateAPIView):
     serializer_class = serializers.WishlistItemSerializer
     permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
     parser_classes = [JSONParser]
+    lookup_field = 'product_id'
 
-    def list(self, request, user_id):
-        self.check_object_permissions(self.request, user_id)
-        queryset = self.get_queryset().filter(owner__id=user_id)
-        serialized = self.serializer_class(queryset, many=True)
-        return Response(serialized.data)
+    # def list(self, request, user_id):
+    #     self.check_object_permissions(self.request, user_id)
+    #     queryset = self.get_queryset().filter(owner__id=user_id)
+    #     serialized = self.serializer_class(queryset, many=True)
+    #     return Response(serialized.data)
 
     def create(self, request, user_id):
-        self.check_object_permissions(self.request, user_id)
-
         try:
             product_id = request.data['product_id']
             product = product_models.Product.objects.get(id=product_id)
