@@ -4,7 +4,6 @@ from products.models import Product
 from products.serializers import ProductSerializer
 from users.serializers import UserSerializer
 from . import models
-from uuid import uuid4
 
 
 class OrderStatusSerializer(serializers.ModelSerializer):
@@ -49,7 +48,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
         for product in products:
             # Finding back the item user sent for combinging it with the product in the database.
-            item = next(x for x in data['items'] if x['product']['id'] == product.id)
+            item = next(
+                x for x in data['items'] if x['product']['id'] == product.id
+            )
 
             # Here we must check that the user cannot buy more products than is available in the database.
             if (product.amount_remaining < item['amount']):
@@ -90,24 +91,4 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Order
-        fields = '__all__'
-
-
-class PaymentSerializer(serializers.ModelSerializer):
-    order = OrderSerializer()
-
-    def create(order_id):
-        order = models.Order.objects.get(id=order_id)
-        payment_service_id = uuid4()
-        secret_key = uuid4()
-        url = f'/payment/{payment_service_id}'
-        return models.Payment(
-            order=order,
-            payment_page_url=url,
-            secret_key=secret_key,
-            payment_service_id=payment_service_id
-        )
-
-    class Meta:
-        model = models.Payment
         fields = '__all__'

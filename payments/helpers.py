@@ -1,4 +1,5 @@
-from .models import Order, Payment
+from orders.models import Order 
+from .models import Payment
 from .serializers import PaymentSerializer
 from rest_framework.exceptions import APIException, ValidationError
 
@@ -24,7 +25,8 @@ def call_payment_service_api(order_id):
         '''
 
         order = Order.objects.get(id=order_id)
-        if order.status.name != 'Created': raise APIException('This order is already paid.')
+        if order.status.name != 'Created':
+            raise APIException('This order is already paid.')
 
         payment = PaymentSerializer.create(order_id)
         payment.save()
@@ -39,8 +41,8 @@ def decrease_products_amount(order_items):
             raise ValidationError(
                 f'The quantity of product with ID {order_item.product.id} is not enough to add this amount to the order.'
             )
-        
+
         # Decreases amount of the products
         order_item.product.amount_remaining = order_item.product.amount_remaining - order_item.amount
-        
+
         order_item.product.save()
