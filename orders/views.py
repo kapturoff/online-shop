@@ -1,4 +1,5 @@
 from rest_framework import status, generics
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
@@ -49,20 +50,23 @@ class OrderCreator(generics.CreateAPIView):
                 data=order_serialized.data, status=status.HTTP_201_CREATED
             )
         except KeyError as e:
-            return Response(
-                data={'detail': f'Field {e} was not provided.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            # return Response(
+            #     data={'detail': f'Field {e} was not provided.'},
+            #     status=status.HTTP_400_BAD_REQUEST,
+            # )
+            raise ValidationError(f'Field {e} was not provided.')
         except Product.DoesNotExist as e:
-            return Response(
-                data={'detail': str(e)},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            # return Response(
+            #     data={'detail': str(e)},
+            #     status=status.HTTP_404_NOT_FOUND,
+            # )
+            raise NotFound(e, 'not_found')
         except TypeError:
-            return Response(
-                data={'detail': 'Field \'items\' must be array of products'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            # return Response(
+            #     data={'detail': 'Field \'items\' must be array of products'},
+            #     status=status.HTTP_400_BAD_REQUEST,
+            # )
+            raise ValidationError('Field \'items\' must be array of products')
 
 
 class OrderDetail(generics.RetrieveAPIView):
