@@ -13,13 +13,14 @@ class Payment(models.Model):
 
     payment_page_url = models.URLField(blank=True, null=True)
     '''
-    In the next variable will be stored an URL to locale endpoint (/payment/<payment_service_id>) which refers to 
-    the fake payment service. In a real online shop here should be stored an URL to the payment page of the payment service.
+    In the next variable will be storing an URL to the locale endpoint (/payment/<payment_service_id>), which refers to 
+    the fake payment service. In a real online shop here should be stored an URL to the payment page or this variable
+    simply may not exist.
     '''
 
     payment_service_id = models.UUIDField(blank=True, null=True)
     '''
-    Here we're going to store an ID of the order on the payment service side.
+    Here an ID of the order from the payment service side is stored.
     '''
 
     secret_key = models.UUIDField()
@@ -28,7 +29,7 @@ class Payment(models.Model):
     It's responsible for the helping to defend against the attacks based on the fake notifications.
 
     As this is just an example of an online shop, the Payment API is going to send this secret key. In case
-    of a real online shop it absolutely must not do this.
+    of a real online shop API absolutely must not do this.
     '''
     def __str__(self) -> str:
         return f'{self.payment_page_url}'
