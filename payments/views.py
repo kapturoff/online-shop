@@ -1,4 +1,6 @@
 from rest_framework import status, generics
+from rest_framework.exceptions import NotFound, ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
@@ -69,21 +71,14 @@ class PaymentCheck(APIView):
             payment_status = request.data['status']
             secret_key = request.data['metadata']['secret_key']
 
-            # TODO: Create handlers for other types of the payments statuses
-            if payment_status != "successed":
-                return Response(
-                    data={'detail': 'Payment is not successed.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            if payment_status != 'successed':
+                raise ValidationError('Payment was not successful.')
 
             payment = Payment.objects.get(payment_service_id=payment_id)
 
             # Checks the authenticity of request by comparing secret key in the database and in the request
             if (str(payment.secret_key) != secret_key):
-                return Response(
-                    data={'detail': 'Invalid secret key.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                raise ValidationError('Invalid secret key.')
 
             order = payment.order
             order_items = order.items.all()
@@ -104,16 +99,7 @@ class PaymentCheck(APIView):
                 data=order_serialized.data,
                 status=status.HTTP_202_ACCEPTED,
             )
-        except Payment.DoesNotExist:
-            return Response(
-                data={
-                    'detail':
-                        f'Payment for with ID {payment_id} does not exist.'
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+        except (Payment.DoesNotExist, DjangoValidationError):
+            raise NotFound(f'Payment for with ID {payment_id} does not exist.')
         except KeyError as e:
-            return Response(
-                data={'detail': f'Field {e} was not provided.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            raise ValidationError(f'Field {e} was not provided.')
