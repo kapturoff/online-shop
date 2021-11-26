@@ -1,7 +1,8 @@
 from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.response import Response
-from rest_framework.renderers import JSONRenderer
+from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.parsers import JSONParser
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework import permissions, generics
 from . import serializers, models, permissions as user_permissions
 from products import models as product_models
@@ -14,17 +15,17 @@ class UserDetail(generics.RetrieveAPIView):
     '''
     queryset = User.objects.all()
     serializer_class = serializers.UserSerializer
-    renderer_classes = [JSONRenderer]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
     lookup_url_kwarg = 'user_id'
 
 
 class UserRegister(generics.CreateAPIView):
     '''
-    Class that responsible for creating of new user. 
+    Class that responsible for creating new user
     '''
     queryset = User.objects.all()
     serializer_class = serializers.RegisterSerializer
-    renderer_classes = [JSONRenderer]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
 
 
 class Wishlist(generics.ListCreateAPIView):
@@ -43,15 +44,11 @@ class Wishlist(generics.ListCreateAPIView):
     '''
     queryset = models.WishlistItem.objects.all()
     serializer_class = serializers.WishlistItemSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
     permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
     parser_classes = [JSONParser]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
     lookup_field = 'product_id'
-
-    # def list(self, request, user_id):
-    #     self.check_object_permissions(self.request, user_id)
-    #     queryset = self.get_queryset().filter(owner__id=user_id)
-    #     serialized = self.serializer_class(queryset, many=True)
-    #     return Response(serialized.data)
 
     def create(self, request, user_id):
         try:
@@ -93,7 +90,9 @@ class Cart(generics.ListCreateAPIView):
 
     queryset = models.CartItem.objects.all()
     serializer_class = serializers.CartItemSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
     permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
     parser_classes = [JSONParser]
 
     def list(self, request, user_id):

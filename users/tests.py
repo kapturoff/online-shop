@@ -15,7 +15,7 @@ test_data = {
         {
             'username': 'test2',
             'password': 'testpassword',
-            'email': 'test1@test.com'
+            'email': 'test2@test.com'
         },
     'user data without a password':
         {
@@ -82,16 +82,14 @@ class RegistrationTests(APITestCase):
         Ensure we cannot create a new user if he chose an existing username
         '''
 
-        # Using same data for registering twice
-        response1 = self.client.post(
-            '/register', test_data['user data 1'], format='json'
-        )
+        # Using same data for registering the one user twice
+        self.client.post('/register', test_data['user data 1'], format='json')
         response2 = self.client.post(
             '/register', test_data['user data 1'], format='json'
         )
 
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response2.data['username'][0].code, 'unique')
+        self.assertEqual(response2.data['username'][0].code, 'invalid')
 
 
 class UserDetailsTest(APITestCase):
@@ -118,18 +116,23 @@ class WishlistTest(APITestCase):
         product.save()
 
         self.client.post('/register', test_data['user data 1'], format='json')
+        self.token_1 = self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
         self.client.post('/register', test_data['user data 2'], format='json')
+        self.token_2 = self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
 
     def test_get_user_wishlist(self):
         '''
         Ensure we can get user's wish list if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/users/1/wishlist',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        response = self.client.get('/users/1/wishlist', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, [])
@@ -138,12 +141,11 @@ class WishlistTest(APITestCase):
         '''
         Ensure we cannot get user's wish list if we logged in as not its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/users/2/wishlist',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        response = self.client.get('/users/2/wishlist', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'].code, 'permission_denied')
@@ -152,13 +154,10 @@ class WishlistTest(APITestCase):
         '''
         Ensure we can add item to a user's wish list if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/users/1/wishlist', {'product_id': 1}, format='json'
+            '/users/1/wishlist', {'product_id': 1},
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -168,13 +167,10 @@ class WishlistTest(APITestCase):
         '''
         Ensure we cannot add a not existing item to an user's wish list
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/users/1/wishlist', {'product_id': 999999}, format='json'
+            '/users/1/wishlist', {'product_id': 999999},
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -184,12 +180,11 @@ class WishlistTest(APITestCase):
         '''
         Ensure we get an error if we not provide product_id
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.post(
+            '/users/1/wishlist', {},
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        response = self.client.post('/users/1/wishlist', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['detail'].code, 'invalid_data')
@@ -203,18 +198,23 @@ class CartsTest(APITestCase):
         product.save()
 
         self.client.post('/register', test_data['user data 1'], format='json')
+        self.token_1 = self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
         self.client.post('/register', test_data['user data 2'], format='json')
+        self.token_2 = self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
 
     def test_get_user_cart(self):
         '''
         Ensure we can get user's cart if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/users/1/cart',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        response = self.client.get('/users/1/cart', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, [])
@@ -223,12 +223,11 @@ class CartsTest(APITestCase):
         '''
         Ensure we cannot get user's cart if we logged in as not its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/users/2/cart',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        response = self.client.get('/users/2/cart', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'].code, 'permission_denied')
@@ -237,16 +236,13 @@ class CartsTest(APITestCase):
         '''
         Ensure we can add item to a user's cart if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
             '/users/1/cart', {
                 'product_id': 1,
                 'amount': 5
-            }, format='json'
+            },
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -257,16 +253,13 @@ class CartsTest(APITestCase):
         '''
         Ensure we cannot add a not existing item to an user's cart
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
             '/users/1/cart', {
                 'product_id': 999999,
                 'amount': 5
-            }, format='json'
+            },
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -276,13 +269,10 @@ class CartsTest(APITestCase):
         '''
         Ensure we get an error if we not provide product_id
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/users/1/cart', {'amount': 5}, format='json'
+            '/users/1/cart', {'amount': 5},
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -292,13 +282,11 @@ class CartsTest(APITestCase):
         '''
         Ensure we get an error if we not provide amount
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
 
         response = self.client.post(
-            '/users/1/cart', {'product_id': 1}, format='json'
+            '/users/1/cart', {'product_id': 1},
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
