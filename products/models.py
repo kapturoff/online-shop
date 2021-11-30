@@ -9,10 +9,10 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    img = models.URLField(null=True)
+    img = models.URLField(blank=True, default=None)
     name = models.CharField(max_length=32)
     price = models.DecimalField(decimal_places=2, max_digits=7)
-    old_price = models.FloatField(null=True)
+    old_price = models.FloatField(blank=True, default=0)
     amount_remaining = models.PositiveSmallIntegerField()
     description = models.TextField(max_length=1000)
     datetime_created = models.DateTimeField(auto_now=True)
