@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
+from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from .permissions import IsOrderOwnerOrAdmin
 from .models import Order
 from .serializers import OrderSerializer
@@ -40,6 +41,7 @@ class OrderCreator(generics.CreateAPIView):
     parser_classes = [JSONParser]
     renderer_classes = [JSONRenderer]
     permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
 
     def create(self, request):
         try:
@@ -50,22 +52,10 @@ class OrderCreator(generics.CreateAPIView):
                 data=order_serialized.data, status=status.HTTP_201_CREATED
             )
         except KeyError as e:
-            # return Response(
-            #     data={'detail': f'Field {e} was not provided.'},
-            #     status=status.HTTP_400_BAD_REQUEST,
-            # )
             raise ValidationError(f'Field {e} was not provided.')
         except Product.DoesNotExist as e:
-            # return Response(
-            #     data={'detail': str(e)},
-            #     status=status.HTTP_404_NOT_FOUND,
-            # )
             raise NotFound(e, 'not_found')
         except TypeError:
-            # return Response(
-            #     data={'detail': 'Field \'items\' must be array of products'},
-            #     status=status.HTTP_400_BAD_REQUEST,
-            # )
             raise ValidationError('Field \'items\' must be array of products')
 
 
@@ -80,3 +70,4 @@ class OrderDetail(generics.RetrieveAPIView):
     renderer_classes = [JSONRenderer]
     lookup_url_kwarg = 'order_id'
     permission_classes = [IsAuthenticated, IsOrderOwnerOrAdmin]
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
