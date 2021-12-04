@@ -1,5 +1,17 @@
-from django import test
-from django.contrib.auth.models import User
+# Disclaimer!
+#
+# Because of the reason that I do not fully understand, the adding of a token authorization
+# is somehow broke the standart approach of an authorization in tests, which is used to be
+# ClientApi.login() method. Now client requires to pass the credentials explicitely.
+# I achieve this by using the approach where we provide credentials on every request to the server.
+#
+# This approach basically looks like this:
+# client.get('/some_endpoint_that_use_authorization', **test_data, HTTP_AUTHORIZATION = 'Token' + http_token)
+#
+# As I made sure further, doing the manual API testing with curl, the standart authorization that use
+# login:password is still alive and works, but obstinate APITestCase.client.login() method does not
+# trust in this. This is why I add that ugly string to every request a test do.
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 from products.models import Category, Product
@@ -247,19 +259,22 @@ class OrderCreatingTest(APITestCase):
         default_order_status.save()
 
         self.client.post('/register', test_data['user data 1'], format='json')
-        self.client.post('/register', test_data['user data 2'], format='json')
+
+        # Generates a token for only one user and stores it in this class
+        # to make it accessable from other tests in this class
+        self.token_1 = 'Token ' + self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
 
     def test_create_order(self):
         '''
         Ensure that we can create the order if a given data is valid
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['valid order'], format='json'
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         order_model = models.Order.objects.get()
@@ -275,20 +290,18 @@ class OrderCreatingTest(APITestCase):
             '/order', test_data['valid order'], format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
 
     def test_create_order_with_no_items(self):
         '''
         Ensure that we can not create the order if a given data has got no items
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no items'], format='json'
+            '/order',
+            test_data['order with no items'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -298,13 +311,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "items"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no items field'], format='json'
+            '/order',
+            test_data['order with no items field'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -314,13 +325,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "address"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no address to send'], format='json'
+            '/order',
+            test_data['order with no address to send'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -330,13 +339,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no phone number'], format='json'
+            '/order',
+            test_data['order with no phone number'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -346,13 +353,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no first name'], format='json'
+            '/order',
+            test_data['order with no first name'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -362,13 +367,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no last name'], format='json'
+            '/order',
+            test_data['order with no last name'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -378,13 +381,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
-            '/order', test_data['order with no email'], format='json'
+            '/order',
+            test_data['order with no email'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -394,15 +395,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we can not create the order if items in given data do not exist
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
             '/order',
             test_data['order with product that does not exist'],
-            format='json'
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -412,15 +409,11 @@ class OrderCreatingTest(APITestCase):
         '''
         Ensure that we cannot create the order if the user asked for a bigger count of product than exist in the database.
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.post(
             '/order',
             test_data['order with the invalid amount of items'],
-            format='json'
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -444,20 +437,41 @@ class OrderDetailTest(APITestCase):
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        # Generates a token for the first user
+        self.token_1 = 'Token ' + self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        # Generate a token for the second user
+        self.token_2 = 'Token ' + self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
+
+        # (!) The tokens need be stored in class since the token authorization is being used in
+        # tests and tests do not accept standart ClientApi.login() authorization for some
+        # reason that I do not fully understand
+
+        # Creates two orders from first user
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
+        )
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
-        self.client.post('/order', test_data['valid order'], format='json')
-        self.client.post('/order', test_data['valid order'], format='json')
-
-        self.client.logout()
-        self.client.login(
-            username=test_data['user data 2']['username'],
-            password=test_data['user data 2']['password']
+        # Creates one order from second user
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_2
         )
-        self.client.post('/order', test_data['valid order'], format='json')
 
         self.o1 = models.Order.objects.get(id=1)
         self.o2 = models.Order.objects.get(id=2)
@@ -469,13 +483,8 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we can get details of an order if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.get(
-            '/order/1', format='json'
+            '/order/1', format='json', HTTP_AUTHORIZATION=self.token_1
         )
 
         order_model = models.Order.objects.get(id=1)
@@ -487,24 +496,17 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we cannot get details of any order if we logged out
         '''
-        response = self.client.get(
-            '/order/1', format='json'
-        )
-        
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = self.client.get('/order/1', format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
 
     def test_get_details_logged_in_as_not_owner(self):
         '''
         Ensure that we cannot get details of an order we logged in as not its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.get(
-            '/order/3', format='json'
+            '/order/3', format='json', HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -514,16 +516,11 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we can get any details of an order if we logged in as its owner
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         response = self.client.get(
-            '/order/2', format='json'
+            '/order/3', format='json', HTTP_AUTHORIZATION=self.token_2
         )
 
-        order_model = models.Order.objects.get(id=2)
+        order_model = models.Order.objects.get(id=3)
         expected_result = serializers.OrderSerializer(order_model)
 
         self.assertEqual(response.data, expected_result.data)
