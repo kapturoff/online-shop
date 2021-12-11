@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User, AnonymousUser
 
 
 class Category(models.Model):
@@ -31,9 +32,15 @@ class Product(models.Model):
 
 
 class Review(models.Model):
-    author_name = models.CharField(max_length=32)
-    review_text = models.TextField(max_length=1000)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='commentaries',
+        blank=True,
+        default=None
+    )
     liked = models.BooleanField()
+    review_text = models.TextField(max_length=1000)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
