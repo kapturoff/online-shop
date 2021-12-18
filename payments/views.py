@@ -11,6 +11,7 @@ from .models import Order, Payment
 from orders.models import OrderStatus
 from orders.serializers import OrderSerializer
 from .helpers import call_payment_service_api, decrease_products_amount
+from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 
 
 class PaymentURL(generics.RetrieveAPIView):
@@ -21,6 +22,7 @@ class PaymentURL(generics.RetrieveAPIView):
     '''
     renderer_classes = [JSONRenderer]
     permission_classes = [IsAuthenticated, IsOrderOwnerOrAdmin]
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
 
     def get(self, request, order_id):
         try:
@@ -41,6 +43,7 @@ class FakePaymentService(generics.RetrieveAPIView):
     '''
     renderer_classes = [JSONRenderer]
     permission_classes = [IsAuthenticated, IsPaymentOwnerOrAdmin]
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
 
     def get(self, request, payment_service_id):
         try:
