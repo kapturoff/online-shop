@@ -2,8 +2,8 @@
 
 from rest_framework import generics
 from rest_framework.renderers import JSONRenderer
-from .models import Category, Product
-from .serializers import CategorySerializer, ProductListSerializer, ProductSerializer
+from .models import Category, Product, Review
+from .serializers import CategorySerializer, ProductListSerializer, ProductSerializer, ReviewSerializer
 
 
 class Categories(generics.ListAPIView):
@@ -36,5 +36,12 @@ class CategoryDetails(generics.RetrieveAPIView):
 class ProductDetails(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    renderer_classes = [JSONRenderer]
+    lookup_url_kwarg = 'product_id'
+
+
+class Reviews(generics.ListAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
     renderer_classes = [JSONRenderer]
     lookup_url_kwarg = 'product_id'
