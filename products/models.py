@@ -44,4 +44,4 @@ class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return f'{self.author_name}, ${self.product.name}, ${self.like}'
+        return f'{self.author.username}, {self.product.name}, {self.liked}'
