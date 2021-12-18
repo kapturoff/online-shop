@@ -1,3 +1,17 @@
+# Disclaimer!
+#
+# Because of the reason that I do not fully understand, the adding of a token authorization
+# is somehow broke the standart approach of an authorization in tests, which is used to be
+# ClientApi.login() method. Now client requires to pass the credentials explicitely.
+# I achieve this by using the approach where we provide credentials on every request to the server.
+#
+# This approach basically looks like this:
+# client.get('/some_endpoint_that_use_authorization', **test_data, HTTP_AUTHORIZATION = 'Token' + http_token)
+#
+# As I made sure further, doing the manual API testing with curl, the standart authorization that use
+# login:password is still alive and works, but obstinate APITestCase.client.login() method does not
+# trust in this. This is why I add that ugly string to every request a test do.
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 from products.models import Category, Product
@@ -118,25 +132,30 @@ class PaymentURLTest(APITestCase):
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        # Generates tokens for users and stores it in the class
+        # to make them accessable from other tests in this class
+        self.token_1 = 'Token ' + self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        self.token_2 = 'Token ' + self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
+
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
-
-        self.client.post('/order', test_data['valid order'], format='json')
-
-        self.client.logout()
 
     def test_get_payment_url(self):
         '''
         Ensure that we can get an payment URL of the order we've created
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         )
-
-        response = self.client.get('/order/1/pay', format='json')
 
         order = models.Payment.objects.get(id=1)
         expected_result = serializers.PaymentSerializer(order)
@@ -147,28 +166,26 @@ class PaymentURLTest(APITestCase):
         '''
         Ensure that we cannot get payment URL if we're not logged in as an order creator
         '''
-        self.client.login(
-            username=test_data['user data 2']['username'],
-            password=test_data['user data 2']['password']
+        response = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_2
         )
-
-        response = self.client.get('/order/1/pay', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'].code, 'permission_denied')
 
-    def test_double_get_payment_url(self):
+    def test_get_payment_url_more_than_one_time(self):
         '''
         Ensure that payment ID does not change if we try to get URL more than one time
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        first_response = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         )
-
-        first_response = self.client.get('/order/1/pay', format='json')
-        second_response = self.client.get('/order/1/pay', format='json')
-        third_response = self.client.get('/order/1/pay', format='json')
+        second_response = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        )
+        third_response = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        )
 
         self.assertEqual(first_response.data, second_response.data)
         self.assertEqual(second_response.data, third_response.data)
@@ -179,22 +196,19 @@ class PaymentURLTest(APITestCase):
         '''
         response = self.client.get('/order/1/pay', format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
 
     def test_get_payment_url_of_not_existing_order(self):
         '''
         Ensure that we cannot get payment URL of order that does not exist
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/order/2/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         )
 
-        response = self.client.get('/order/2/pay', format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['detail'].code, 'not_found')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'].code, 'permission_denied')
 
 
 class FakePaymentServiceTest(APITestCase):
@@ -214,27 +228,34 @@ class FakePaymentServiceTest(APITestCase):
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        # Generates tokens for users and stores it in the class
+        # to make them accessable from other tests in this class
+        self.token_1 = 'Token ' + self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        self.token_2 = 'Token ' + self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
+
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
-
-        self.client.post('/order', test_data['valid order'], format='json')
-
-        self.client.logout()
 
     def test_get_payment_page(self):
         '''
-        Ensure that we can visit payment page for payment that existing
+        Ensure that we can visit payment page for existing payment
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment ID for this purchase
-        purchase = self.client.get('/order/1/pay', format='json').data
-        response = self.client.get(purchase['payment_page_url'])
+        purchase = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
+        response = self.client.get(
+            purchase['payment_page_url'], HTTP_AUTHORIZATION=self.token_1
+        )
 
         self.assertEquals(
             response.data['text'],
@@ -245,15 +266,13 @@ class FakePaymentServiceTest(APITestCase):
         '''
         Ensure that we cannot access the payment page if we provided a wrong payment ID
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        response = self.client.get(
+            '/payment/payment-id-that-does-not-exist',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
-        response = self.client.get('/payment/payment-id-that-does-not-exist')
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['detail'].code, 'not_found')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'].code, 'permission_denied')
 
 
 class PaymentCheckTest(APITestCase):
@@ -275,14 +294,18 @@ class PaymentCheckTest(APITestCase):
 
         self.client.post('/register', test_data['user data 1'], format='json')
 
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
+        # Generates a token for only one user and stores it in the class
+        # to make it accessable from other tests in this class
+        self.token_1 = 'Token ' + self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        self.client.post(
+            '/order',
+            test_data['valid order'],
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
-
-        self.client.post('/order', test_data['valid order'], format='json')
-
-        self.client.logout()
 
     def get_payment_from_database(self, id):
         return models.Payment.objects.get(id=id)
@@ -291,13 +314,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that order can be paid
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
 
@@ -341,13 +361,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if payment was not successed
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
 
@@ -391,13 +408,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we provide wrong payment service ID in the request
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
 
         # Sending notification to the webhook to notify about the successful payment
@@ -443,13 +457,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we provide wrong secret key in the request
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         payment_id = payment['payment_service_id']
 
         # Sending notification to the webhook to notify about the successful payment
@@ -492,13 +503,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we do not provide payment status in the request
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
 
@@ -544,13 +552,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we do not provide payment ID in the request
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
 
         # Sending notification to the webhook to notify about the successful payment
@@ -594,13 +599,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we do not provide payment status in the request
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         payment_id = payment['payment_service_id']
 
         # Sending notification to the webhook to notify about the successful payment
@@ -643,13 +645,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that we can not pay for order more than one time
         '''
-        self.client.login(
-            username=test_data['user data 1']['username'],
-            password=test_data['user data 1']['password']
-        )
-
         # Getting payment service ID for this purchase
-        payment = self.client.get('/order/1/pay', format='json').data
+        payment = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
 
@@ -665,7 +664,9 @@ class PaymentCheckTest(APITestCase):
             format='json'
         )
 
-        response1 = self.client.get('/order/1/pay', format='json')
+        response1 = self.client.get(
+            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+        )
         self.assertEqual(
             response1.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
