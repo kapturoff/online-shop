@@ -24,9 +24,17 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ReviewAuthorSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    img = serializers.URLField(required=False)
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
+    author = ReviewAuthorSerializer()
 
     class Meta:
         model = models.Review
         fields = "__all__"
+        depth = 2
