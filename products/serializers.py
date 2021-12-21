@@ -1,4 +1,7 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from django.contrib.auth.models import User
+from rest_framework.generics import get_object_or_404
 from . import models
 
 
@@ -33,6 +36,23 @@ class ReviewAuthorSerializer(serializers.Serializer):
 class ReviewSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
     author = ReviewAuthorSerializer()
+
+    def create(data, product_id: int, user: User):
+        try:
+            review_text = data['review_text']
+            liked = data['liked']
+            product = get_object_or_404(models.Product, id=product_id)
+
+            review = models.Review(
+                review_text=review_text,
+                liked=liked,
+                product=product,
+                author=user
+            )
+
+            return review
+        except KeyError as e:
+            raise ValidationError(f'{e} field is not set.')
 
     class Meta:
         model = models.Review
