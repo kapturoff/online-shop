@@ -122,3 +122,23 @@ class Cart(generics.ListCreateAPIView):
             )
         except product_models.Product.DoesNotExist:
             raise NotFound('Product with this ID was not found.', 'not_found')
+
+
+class WishlistItemDelete(generics.DestroyAPIView):
+    queryset = models.WishlistItem.objects.all()
+    serializer_class = serializers.WishlistItemSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
+    permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
+    parser_classes = [JSONParser]
+    lookup_url_kwarg = 'wishlist_item_id'
+
+
+class CartItemDelete(generics.DestroyAPIView):
+    queryset = models.CartItem.objects.all()
+    serializer_class = serializers.CartItemSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
+    permission_classes = [permissions.IsAuthenticated, user_permissions.IsOwner]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
+    parser_classes = [JSONParser]
+    lookup_url_kwarg = 'cart_item_id'
