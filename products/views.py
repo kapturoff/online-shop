@@ -1,10 +1,11 @@
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import NotFound
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from .models import Category, Product, Review
-from .serializers import CategorySerializer, ProductListSerializer, ProductSerializer, ReviewSerializer, ReviewAuthorSerializer
+from .serializers import CategorySerializer, ProductListSerializer, ProductSerializer, ReviewSerializer
 
 
 class Categories(generics.ListAPIView):
@@ -54,6 +55,16 @@ class ReviewList(generics.ListAPIView):
     serializer_class = ReviewSerializer
     renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
     lookup_url_kwarg = 'product_id'
+
+    def get_queryset(self):
+        product_id = self.kwargs['product_id']
+
+        try:
+            Product.objects.get(id = self.kwargs['product_id'])
+        except Product.DoesNotExist:
+            raise NotFound(f'Product with ID { product_id } was not found')
+            
+        return Review.objects.filter(product__id = product_id)
 
 
 class ReviewCreate(generics.CreateAPIView):
