@@ -36,7 +36,12 @@ test_data = {
             'amount_remaining': 30,
             'size': 'L',
             'color': 'red',
-        }
+        },
+    'review data': {
+        'liked': True,
+        'review_text': 'Awesome t-shirt!'
+    },
+    'product url': '/categories/top%20clothes/1/reviews/create'
 }
 
 
@@ -506,3 +511,137 @@ class CartItemDeleteTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'].code, 'not_found')
+
+
+class ReviewDelete(APITestCase):
+    def setUp(self):
+        category = Category(name='top clothes')
+        category.save()
+        product = Product(**test_data['product data'], category=category)
+        product.save()
+
+        self.client.post('/register', test_data['user data 1'], format='json')
+        self.token_1 = self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        self.client.post('/register', test_data['user data 2'], format='json')
+        self.token_2 = self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
+
+    def test_delete_one_review(self):
+        '''
+        Test that we can delete one review
+        '''
+        # Add a new review
+        self.client.post(
+            test_data['product url'],
+            test_data['review data'],
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        # Delete a just created review
+        response = self.client.delete(
+            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        self.assertFalse(response.data)  # Because it responses with None
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check that there's no review left made by this user
+        reviews = self.client.get('/users/1/reviews').data
+        self.assertEqual(reviews, [])
+
+    def test_delete_multiple_review(self):
+        '''
+        Test that we can delete multiple reviews
+        '''
+        # Add review three times
+        for _ in range(0, 3):
+            self.client.post(
+                test_data['product url'],
+                test_data['review data'],
+                format='json',
+                HTTP_AUTHORIZATION='Token ' + self.token_1
+            )
+
+        # Delete all the created reviews
+        response_1 = self.client.delete(
+            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+        response_2 = self.client.delete(
+            '/users/1/reviews/2', HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+        response_3 = self.client.delete(
+            '/users/1/reviews/3', HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        self.assertFalse(response_1.data)
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertFalse(response_2.data)
+        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
+        self.assertFalse(response_3.data)
+        self.assertEqual(response_3.status_code, status.HTTP_200_OK)
+
+        # Check that there's no review left made by this user
+        reviews = self.client.get('/users/1/reviews').data
+        self.assertEqual(reviews, [])
+
+    def test_delete_one_review_logged_out(self):
+        '''
+        Test that we cannot delete anything if we're not authorized
+        '''
+        # Create a new review
+        self.client.post(
+            test_data['product url'],
+            test_data['review data'],
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        # Remove it
+        response = self.client.delete('/users/1/reviews/1')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'].code, 'not_authenticated')
+
+        # Check that there's only one review left made by this user
+        reviews = self.client.get('/users/1/reviews').data
+        self.assertEqual(len(reviews), 1)
+
+    def test_delete_review_that_does_not_exist(self):
+        '''
+        Test that we cannot delete reviews that does not exist
+        '''
+        response = self.client.delete(
+            '/users/1/reviews/9999', HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'].code, 'permission_denied')
+
+    def test_delete_review_by_other_user(self):
+        '''
+        Test that we cannot delete reviews that were made by other user
+        '''
+        # Add a new review
+        self.client.post(
+            test_data['product url'],
+            test_data['review data'],
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        # Trying to delete a just created review
+        response = self.client.delete(
+            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_2
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'].code, 'permission_denied')
+
+        # Check that there's only one review left made by this user
+        reviews = self.client.get('/users/1/reviews').data
+        self.assertEqual(len(reviews), 1)
