@@ -11,4 +11,5 @@ urlpatterns = [
     path('users/<int:user_id>/cart', views.Cart.as_view()),
     path('users/<int:user_id>/cart/<int:cart_item_id>', views.CartItemDelete.as_view()),
     path('users/<int:user_id>/reviews', views.ReviewList.as_view()),
+    path('users/<int:user_id>/reviews/<int:review_id>', views.ReviewDelete.as_view()),
 ]

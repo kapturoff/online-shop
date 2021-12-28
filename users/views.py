@@ -157,8 +157,23 @@ class ReviewList(generics.ListAPIView):
         user_id = self.kwargs['user_id']
 
         try:
-            product_models.User.objects.get(id = user_id)
+            product_models.User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise NotFound(f'User with ID { user_id } was not found.')
-            
-        return product_models.Review.objects.filter(author__id = user_id)
+
+        return product_models.Review.objects.filter(author__id=user_id)
+
+
+class ReviewDelete(generics.DestroyAPIView):
+    '''
+    It deletes requested review from database.
+    Example of using: /users/2/reviews/3
+    '''
+    queryset = product_models.Review.objects.all()
+    serializer_class = product_serializers.ReviewSerializer
+    authentication_classes = [TokenAuthentication, BasicAuthentication]
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
+    permission_classes = [
+        permissions.IsAuthenticated, user_permissions.IsReviewOwner
+    ]
+    lookup_url_kwarg = 'review_id'
