@@ -5,7 +5,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework import permissions, generics
 from . import serializers, models, permissions as user_permissions
-from products import models as product_models
+from products import models as product_models, serializers as product_serializers
 from django.contrib.auth.models import User
 
 
@@ -142,3 +142,23 @@ class CartItemDelete(generics.DestroyAPIView):
     renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
     parser_classes = [JSONParser]
     lookup_url_kwarg = 'cart_item_id'
+
+
+class ReviewList(generics.ListAPIView):
+    '''
+    It responses with a list of reviews made by a requested user.
+    Example of using: /users/2/reviews
+    '''
+    queryset = product_models.Review.objects.all()
+    serializer_class = product_serializers.ReviewSerializer
+    renderer_classes = [BrowsableAPIRenderer, JSONRenderer]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+
+        try:
+            product_models.User.objects.get(id = user_id)
+        except User.DoesNotExist:
+            raise NotFound(f'User with ID { user_id } was not found.')
+            
+        return product_models.Review.objects.filter(author__id = user_id)
