@@ -321,8 +321,7 @@ class WishlistItemDeleteTest(APITestCase):
         )  # Adding item to wish list
 
         response = self.client.delete(
-            '/users/1/wishlist/1/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/wishlist/1', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         user = User.objects.get(id=1)
@@ -344,16 +343,13 @@ class WishlistItemDeleteTest(APITestCase):
             )
 
         response_1 = self.client.delete(
-            '/users/1/wishlist/1/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/wishlist/1', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
         response_2 = self.client.delete(
-            '/users/1/wishlist/2/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/wishlist/2', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
         response_3 = self.client.delete(
-            '/users/1/wishlist/3/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/wishlist/3', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         user = User.objects.get(id=1)
@@ -377,7 +373,7 @@ class WishlistItemDeleteTest(APITestCase):
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
-        response = self.client.delete('/users/1/wishlist/1/delete')
+        response = self.client.delete('/users/1/wishlist/1')
 
         user = User.objects.get(id=1)
 
@@ -392,11 +388,9 @@ class WishlistItemDeleteTest(APITestCase):
         Test that we cannot delete items that does not exist
         '''
         response = self.client.delete(
-            '/users/1/wishlist/9999/delete',
+            '/users/1/wishlist/9999',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        user = User.objects.get(id=1)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'].code, 'not_found')
@@ -434,8 +428,7 @@ class CartItemDeleteTest(APITestCase):
         )
 
         response = self.client.delete(
-            '/users/1/cart/1/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/cart/1', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         user = User.objects.get(id=1)
@@ -460,16 +453,13 @@ class CartItemDeleteTest(APITestCase):
             )
 
         response_1 = self.client.delete(
-            '/users/1/cart/1/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/cart/1', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
         response_2 = self.client.delete(
-            '/users/1/cart/2/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/cart/2', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
         response_3 = self.client.delete(
-            '/users/1/cart/3/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/cart/3', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         user = User.objects.get(id=1)
@@ -496,7 +486,7 @@ class CartItemDeleteTest(APITestCase):
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
-        response = self.client.delete('/users/1/cart/1/delete')
+        response = self.client.delete('/users/1/cart/1')
 
         user = User.objects.get(id=1)
 
@@ -511,11 +501,8 @@ class CartItemDeleteTest(APITestCase):
         Test that we cannot delete items that does not exist
         '''
         response = self.client.delete(
-            '/users/1/cart/9999/delete',
-            HTTP_AUTHORIZATION='Token ' + self.token_1
+            '/users/1/cart/9999', HTTP_AUTHORIZATION='Token ' + self.token_1
         )
-
-        user = User.objects.get(id=1)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'].code, 'not_found')
