@@ -400,3 +400,122 @@ class WishlistItemDeleteTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'].code, 'not_found')
+
+
+class CartItemDeleteTest(APITestCase):
+    def setUp(self):
+        category = Category(name='top clothes')
+        category.save()
+        product = Product(**test_data['product data'], category=category)
+        product.save()
+
+        self.client.post('/register', test_data['user data 1'], format='json')
+        self.token_1 = self.client.post(
+            '/token', test_data['user data 1'], format='json'
+        ).data['token']
+
+        self.client.post('/register', test_data['user data 2'], format='json')
+        self.token_2 = self.client.post(
+            '/token', test_data['user data 2'], format='json'
+        ).data['token']
+
+    def test_delete_one_item(self):
+        '''
+        Test that we can delete one item from cart
+        '''
+        # Add item to cart
+        self.client.post(
+            '/users/1/cart', {
+                'product_id': 1,
+                'amount': 2
+            },
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        response = self.client.delete(
+            '/users/1/cart/1/delete',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        user = User.objects.get(id=1)
+
+        self.assertFalse(response.data)  # Because it responses with None
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list(user.cart.all()), [])
+
+    def test_delete_multiple_item(self):
+        '''
+        Test that we can delete one item from cart
+        '''
+        # Add item to cart three times
+        for _ in range(0, 3):
+            self.client.post(
+                '/users/1/cart', {
+                    'product_id': 1,
+                    'amount': 2
+                },
+                format='json',
+                HTTP_AUTHORIZATION='Token ' + self.token_1
+            )
+
+        response_1 = self.client.delete(
+            '/users/1/cart/1/delete',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+        response_2 = self.client.delete(
+            '/users/1/cart/2/delete',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+        response_3 = self.client.delete(
+            '/users/1/cart/3/delete',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        user = User.objects.get(id=1)
+
+        self.assertFalse(response_1.data)
+        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
+        self.assertFalse(response_2.data)
+        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
+        self.assertFalse(response_3.data)
+        self.assertEqual(response_3.status_code, status.HTTP_200_OK)
+        self.assertEqual(list(user.cart.all()), [])
+
+    def test_delete_one_item_logged_out(self):
+        '''
+        Test that we cannot delete anything if we're not authorized
+        '''
+        # Add item to cart
+        self.client.post(
+            '/users/1/cart', {
+                'product_id': 1,
+                'amount': 2
+            },
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        response = self.client.delete('/users/1/cart/1/delete')
+
+        user = User.objects.get(id=1)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'].code, 'not_authenticated')
+        self.assertEqual(
+            len(user.cart.all()), 1
+        )  # Because there's only one item remained not deleted
+
+    def test_delete_item_that_does_not_exist(self):
+        '''
+        Test that we cannot delete items that does not exist
+        '''
+        response = self.client.delete(
+            '/users/1/cart/9999/delete',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        )
+
+        user = User.objects.get(id=1)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'].code, 'not_found')
