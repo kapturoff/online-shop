@@ -125,6 +125,10 @@ class Cart(generics.ListCreateAPIView):
 
 
 class WishlistItemDelete(generics.DestroyAPIView):
+    '''
+    It deletes requested cart item from database.
+    Example of using: /users/2/wishlist/3 (the request must have a DELETE method)
+    '''
     queryset = models.WishlistItem.objects.all()
     serializer_class = serializers.WishlistItemSerializer
     authentication_classes = [TokenAuthentication, BasicAuthentication]
@@ -135,6 +139,10 @@ class WishlistItemDelete(generics.DestroyAPIView):
 
 
 class CartItemDelete(generics.DestroyAPIView):
+    '''
+    It deletes requested cart item from database.
+    Example of using: /users/2/cart/3 (the request must have a DELETE method)
+    '''
     queryset = models.CartItem.objects.all()
     serializer_class = serializers.CartItemSerializer
     authentication_classes = [TokenAuthentication, BasicAuthentication]
@@ -167,7 +175,7 @@ class ReviewList(generics.ListAPIView):
 class ReviewDelete(generics.DestroyAPIView):
     '''
     It deletes requested review from database.
-    Example of using: /users/2/reviews/3
+    Example of using: /users/2/reviews/3 (the request must have a DELETE method)
     '''
     queryset = product_models.Review.objects.all()
     serializer_class = product_serializers.ReviewSerializer
