@@ -224,19 +224,10 @@ class ReviewCreateTest(APITestCase):
             '/token', test_data['user'], format='json'
         ).data['token']
 
-    '''
-    [x] product_id, logged in, liked, review_text
-    [x] product_id, logged in, liked, review_text (x2)
-    [x] product_id is invalid, logged in, liked, review_text
-    [] product_id is valid, logged out, liked, review_text
-    [x] product_id is valid, logged in, no liked, review_text
-    [] product_id, logged in, liked, no review_text
-    '''
-
     def test_create_review(self):
         '''
-        Ensure that we can create the new review if we logged in, pass valid 
-        product ID and provide fields "liked" and "review_text".
+        Ensure that we can create the new review if we are logged in, passing valid
+        product ID and providing fields "liked" and "review_text".
         '''
         review = Review(
             **test_data['review 1'], author=self.user, product=self.p1
@@ -264,8 +255,8 @@ class ReviewCreateTest(APITestCase):
 
     def test_create_review_twice(self):
         '''
-        Ensure that we can create two new reviews in a row if we logged in, pass valid 
-        product IDs and provide fields "liked" and "review_text".
+        Ensure that we can create two new reviews in a row if we are logged in, passing valid
+        product IDs and providing fields "liked" and "review_text".
         '''
         self.client.post(
             '/categories/top%20clothes/1/reviews/create',
@@ -386,3 +377,112 @@ class ReviewCreateTest(APITestCase):
 
         # Test that nothing was saved in database
         self.assertFalse(review)
+
+
+class ProductSearch(APITestCase):
+    def setUp(self) -> None:
+        self.c1 = Category(**test_data['category 1'])
+        self.c2 = Category(**test_data['category 2'])
+        self.c1.save()
+        self.c2.save()
+
+        self.p1 = Product(**test_data['product 1'], category=self.c1)
+        self.p2 = Product(**test_data['product 2'], category=self.c1)
+
+        self.p1.save()
+        self.p2.save()
+
+    '''
+    [x] q is set, lte is set, gte is set
+    [x] q is set, lte is not set, gte is not set
+    [x] q is set, lte is not set, gte is set
+    [x] q is set, lte is set, gte is not set
+    [x] response without parameters
+    [x] q = <int>
+    [x] q is set, lte = <str>, gte is not set
+    [x] q is set, lte is not set, get = <str>
+    '''
+
+    def test_valid_search(self):
+        '''
+        Ensure that the search is working correctly
+        '''
+        expected_result = ProductSerializer([self.p2], many=True)
+        response = self.client.get('/products/search?q=t&lte=7&gte=5.5')
+
+        self.assertEquals(response.data, expected_result.data)
+
+    def test_search_without_lte_and_gte(self):
+        '''
+        Ensure that the search is working correctly with only one required parameter
+        '''
+        expected_result = ProductSerializer([self.p1, self.p2], many=True)
+        response = self.client.get('/products/search?q=t')
+
+        self.assertEquals(response.data, expected_result.data)
+
+    def test_search_with_gte(self):
+        '''
+        Ensure that the greater than parameter is working correctly
+        '''
+        expected_result = ProductSerializer([self.p2], many=True)
+        response = self.client.get('/products/search?q=t&gte=5.5')
+
+        self.assertEquals(response.data, expected_result.data)
+
+    def test_search_with_lte(self):
+        '''
+        Ensure that the less than parameter is working correctly
+        '''
+        expected_result = ProductSerializer([self.p1], many=True)
+        response = self.client.get('/products/search?q=t&lte=5.5')
+
+        self.assertEquals(response.data, expected_result.data)
+
+    def test_search_without_any_parameter(self):
+        '''
+        Ensure that the search does not work without parameters
+        '''
+        response = self.client.get('/products/search')
+
+        self.assertEquals(response.data['detail'], 'Parameter "q" is required.')
+        self.assertEquals(
+            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    def test_search_with_int_in_query_parameter(self):
+        '''
+        Ensure that the search returns an empty list if an integer is provided in the "q" parameter
+        '''
+        expected_result = []
+        response = self.client.get('/products/search?q=1.8')
+
+        self.assertEquals(response.data, expected_result)
+
+    def test_search_with_str_in_lte(self):
+        '''
+        Ensure that we cannot provide anything but an integer in the "lte" parameter
+        '''
+        response = self.client.get('/products/search?q=t&lte=error')
+
+        self.assertEquals(
+            response.data['detail'],
+            'Parameter "lte" is needed to be an integer or a float.'
+        )
+        self.assertEquals(
+            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    def test_search_with_str_in_gte(self):
+        '''
+        Ensure that we cannot provide anything but an integer in the "gte" parameter
+        '''
+        response = self.client.get('/products/search?q=t&gte=error')
+
+        self.assertEquals(
+            response.data['detail'],
+            'Parameter "gte" is needed to be an integer or a float.'
+        )
+        self.assertEquals(
+            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
