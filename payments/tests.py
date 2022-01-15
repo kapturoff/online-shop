@@ -352,10 +352,8 @@ class PaymentCheckTest(APITestCase):
             test_data['valid order']['items'][1]['amount']
         )
 
-        # Checks if the payment was deleted
-        self.assertRaises(
-            models.Payment.DoesNotExist, self.get_payment_from_database, 1
-        )
+        # Checks if the payment changed its status
+        self.assertTrue(self.get_payment_from_database(1).paid)
 
     def test_not_successful_pay(self):
         '''
@@ -672,7 +670,7 @@ class PaymentCheckTest(APITestCase):
         )
         self.assertEqual(response1.data['detail'].code, 'error')
         self.assertEqual(
-            response1.data['detail'], 'This order is already paid.'
+            str(response1.data['detail']), 'Payment is already made.'
         )
 
         response2 = self.client.post(
@@ -686,9 +684,10 @@ class PaymentCheckTest(APITestCase):
             format='json'
         )
 
-        self.assertEqual(response2.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response2.data['detail'].code, 'not_found')
         self.assertEqual(
-            response2.data['detail'],
-            f'Payment for with ID {payment_id} does not exist.'
+            response2.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        self.assertEqual(response2.data['detail'].code, 'error')
+        self.assertEqual(
+            str(response2.data['detail']), 'Payment is already made.'
         )
