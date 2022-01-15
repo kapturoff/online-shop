@@ -11,6 +11,10 @@ def call_payment_service_api(order_id):
 
     try:
         payment = Payment.objects.get(order__id=order_id)
+
+        if payment.paid:
+            raise APIException('Payment is already made.')
+
         payment_serialized = PaymentSerializer(payment)
         return payment_serialized
     except Payment.DoesNotExist:

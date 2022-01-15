@@ -1,5 +1,5 @@
 from rest_framework import status, generics
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError, APIException
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -79,6 +79,9 @@ class PaymentCheck(APIView):
 
             payment = Payment.objects.get(payment_service_id=payment_id)
 
+            if payment.paid:
+                raise APIException('Payment is already made.')
+
             # Checks the authenticity of request by comparing secret key in the database and in the request
             if (str(payment.secret_key) != secret_key):
                 raise ValidationError('Invalid secret key.')
@@ -89,8 +92,9 @@ class PaymentCheck(APIView):
             # Reduces the total number of products when user paid for order
             decrease_products_amount(order_items)
 
-            # Removes payment information
-            payment.delete()
+            # Change status of the payment on the pseudo-payment service side
+            payment.paid = True
+            payment.save()
 
             # Changes status of order
             order.status = OrderStatus.objects.get(name='Paid')

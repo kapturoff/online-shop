@@ -31,5 +31,11 @@ class Payment(models.Model):
     As this is just an example of an online shop, the Payment API is going to send this secret key. In case
     of a real online shop API absolutely must not do this.
     '''
+
+    paid = models.BooleanField(default=False)
+    '''
+    This field emulates the information about the payment on the payment service side.
+    '''
+
     def __str__(self) -> str:
         return f'{self.payment_page_url}'
