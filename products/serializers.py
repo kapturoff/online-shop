@@ -16,6 +16,7 @@ class ProductSerializer(serializers.ModelSerializer):
     reviews_count = serializers.IntegerField()
     likes_count = serializers.IntegerField()
     dislikes_count = serializers.IntegerField()
+    in_stock = serializers.BooleanField()
 
     class Meta:
         model = models.Product

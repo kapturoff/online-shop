@@ -35,6 +35,10 @@ class Product(models.Model):
     def dislikes_count(self):
         return Review.objects.filter(product__id=self.id, liked=False).count()
 
+    @property
+    def in_stock(self):
+        return self.amount_remaining > 0
+
     # TODO: Create seperated models for next two fields (#a36f5667)
     size = models.CharField(max_length=16)
     color = models.CharField(max_length=32)
