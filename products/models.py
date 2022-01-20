@@ -23,6 +23,18 @@ class Product(models.Model):
         related_name='products',
     )
 
+    @property
+    def reviews_count(self):
+        return Review.objects.filter(product__id=self.id).count()
+
+    @property
+    def likes_count(self):
+        return Review.objects.filter(product__id=self.id, liked=True).count()
+
+    @property
+    def dislikes_count(self):
+        return Review.objects.filter(product__id=self.id, liked=False).count()
+
     # TODO: Create seperated models for next two fields (#a36f5667)
     size = models.CharField(max_length=16)
     color = models.CharField(max_length=32)
