@@ -17,7 +17,10 @@ class ProductAdmin(admin.ModelAdmin):
         'likes_count', 'dislikes_count'
     )
 
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'author', 'product', 'liked',)
+
 
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Product, ProductAdmin)
-admin.site.register(Review)
+admin.site.register(Review, ReviewAdmin)
