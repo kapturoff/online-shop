@@ -13,9 +13,14 @@ class WishlistItemSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    reviews_count = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'date_joined', 'last_login']
+        fields = ['id', 'username', 'date_joined', 'last_login', 'reviews_count']
+
+    def get_reviews_count(self, user):
+        return user.commentaries.count()
 
 
 class RegisterSerializer(serializers.Serializer):
