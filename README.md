@@ -248,3 +248,104 @@ curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X PO
 Returns: ```Order```
 
 After all of these manipulations, order finally gets his status «Paid»! You can verify that by visiting the admin site.
+
+### Writing reviews for products
+After you bought a product, you may want to send a review about it. This can be accomplished by sending POST request here: `categories/<category_name>/<product_id>/reviews/create`.
+
+Body of this request must include:
+```python
+{
+  "review_text": string,
+  "liked": boolean,
+}
+```
+
+More than that, you need to be authenticated to send this kind of request.
+
+Example of creating a review:
+```
+curl -u my_username:my_ultra_hard_password -d "@review.json" -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X POST http://localhost:8000/categories/t_shirts/1/reviews/create
+```
+
+Returns: ```Review```
+
+Review schema:
+```python
+{
+  "author": User,
+  "liked": boolean,
+  "review_text": string,
+  "product": Product,
+}
+```
+
+
+### Getting the list of reviews
+You also may be interested in getting all of the reviews (comments) about a certain product. To get them, you need to access the following endpoint `categories/<category_name>/<product_id>/reviews`.
+
+Example of request:
+```
+curl -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories/top%20clothes/2/reviews
+```
+
+Returns: ```Review[]```
+
+You also can get the list of reviews made by a certain user accessing the following endpoint: `users/<int:user_id>/reviews`.
+
+Example of request:
+```
+curl -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/1/reviews
+```
+
+Returns: ```Review[]```
+
+### Deleting reviews
+You can delete a review of yours by sending DELETE request here: `users/<int:user_id>/reviews/<int:review_id>`. You have to be authenticated as a this review creator.
+
+Example of request:
+```
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X DELETE http://localhost:8000/users/1/reviews/3
+```
+
+Returns: ```None```
+
+### Deleting items from the cart or the wish list
+You can delete an item from these lists by accessing `users/<int:user_id>/wishlist/<int:wishlist_item_id>` for deleting wish list item and accessing `users/<int:user_id>/cart/<int:cart_item_id>` if you want to delete item from the cart. You need to be the owner of a wish list / a cart if you want to delete from it and you need to be sending a DELETE method in both cases.
+
+Example:
+```
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X DELETE http://localhost:8000/users/1/wishlist/1
+```
+
+Returns: ```None```
+
+### Using tokens in the request authentication
+You can get a token and authenticate your requests with it, instead of using the standard login:pass authentication. To get it, you need to be registered and then access `/token` endpoint using standart authentication. This is going be look like:
+
+```
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X GET http://localhost:8000/token
+```
+
+Returns: ```{ "token": string }```
+
+Value of the field "token" is your token itself. You can now authenticate all of your requests using it. To do it, you must additionally include _Authorization header_ in your requests. Let's make a request via curl using this header:
+
+```
+curl -H "Authorization: Token d084de71184336f57d3b673b9cc3713209eb7860" -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/2/cart
+```
+
+### Search for a certain product
+If you're not sure what are you looking for in the online shop, you can search for products using `/search` endpoint. It works via query parameters, so you need to pass them into requests. 
+
+Example of using:
+```
+curl -H "Accept: application/json; indent=4" -X GET "http://localhost:8000/products/search?q=t-s&lte=3&gte=2.2"
+```
+
+Returns: `Product[]`
+
+Parameter `q=<str>` is responsible for searching by name and it searches the products that starts with the value of this property. For example, `/search?q=pa` will find all the _pajamas_, _panties_, _parachute pants_ in the shop. This is the only required parameter out of three.
+
+Parameter `lte=<float>` is responsible for searching by cost. It filters all of products that does not cost less than value of the parameter. `/search?q=pa&lte=10.5` will keep only those products whose price is less then 10.5$.
+
+Parameter `gte=<float>` is antipod of parameter `lte=` and it searchs for only those products whose price is more than value of the parameter.
