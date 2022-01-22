@@ -1,5 +1,5 @@
 # online-shop
-Backend of online shop
+Basic backend for an online shop
 
 ## Installation
 
@@ -54,18 +54,18 @@ Request body must contain:
 }
 ```
 
-Example of request:
+Example:
 ```
-curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X POST http://localhost:8000/register
+curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -H "Accept: application/json; indent=4" -X POST http://localhost:8000/register
 ```
 
 Returns: ```User```
 
 After user registered, you can get data of his profile by passing his ID as request parameter like this — _/users/<user_id>_
 
-Example of request:
+Example:
 ```
-curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X POST http://localhost:8000/register
+curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -H "Accept: application/json; indent=4" -X POST http://localhost:8000/register
 ```
 
 Returns: ```User```
@@ -74,9 +74,9 @@ Returns: ```User```
 ### Getting categories
 Every product is placed in a category. To get list of all categories, you need to send GET request to _/categories_.
 
-Example of request:
+Example:
 ```
-curl -H 'Content-Type: application/json; indent=4' -X GET http://localhost:8000/categories
+curl -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories
 ```
 
 Returns: ```Category[]```
@@ -93,9 +93,9 @@ Category model contains these two fields:
 ### Getting list of the products in a category and the product details
 To get list of the products in a certain category, you need to send GET request to _/categories/<category_name>_.
 
-Example of request:
+Example:
 ```
-curl -H 'Content-Type: application/json; indent=4' -X GET http://localhost:8000/categories/pants
+curl -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories/pants
 ```
 
 Returns: ```Product[]```
@@ -105,7 +105,7 @@ Product model contains the following fields:
 {
   "id": integer,
   "category": Category,
-  "link_to_image": string,
+  "img": string,
   "name": string,
   "price": float,
   "old-price": float,
@@ -114,14 +114,18 @@ Product model contains the following fields:
   "datetime_created": string, # Representing datetime.datetime instance
   "size": string,
   "color": string,
+  "reviews_count": integer,
+  "likes_count": integer,
+  "dislikes_count": integer,
+  "in_stock": boolean,
 }
 ```
 
-To get data about a certain product, pass its ID as request parameter like that: _/category/<category_name>/<product_id>_
+To get data about a certain product, pass its ID as request parameter like that: _/categories/<category_name>/<product_id>_
 
-Example of request:
+Example:
 ```
-curl -H 'Content-Type: application/json; indent=4' -X GET http://localhost:8000/categories/pants/1
+curl -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories/pants/1
 ```
 
 Returns: ```Product```
@@ -131,9 +135,9 @@ Returns: ```Product```
 You can get your wish list by accessing _/user/<your_user_id>/wishlist_ by GET request. 
 If you try to access someone else's wish list, you get Permission denied error. For this reason you need be authenticated to access wish list.
 
-Example of request: 
+Example: 
 ```
-curl -u my_username:my_ultra_hard_password -H "Content-Type: application/json; indent=4" -X GET http://localhost:8000/users/1/wishlist
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/1/wishlist
 ```
 
 Responses with: `WishlistItem[]`
@@ -147,9 +151,9 @@ Wishlist item contains the only field:
 
 To add a new item to your wish list, you need to send ```WishlistItem``` in POST request to _/users/<your_user_id>/wishlist_. Do not forget to be authenticated.
 
-Example of request:
+Example:
 ```
-curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H "Content-Type: application/json; indent=4" -X POST http://localhost:8000/users/1/wishlist
+curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H "Content-Type: application/json; indent=4" -H "Accept: application/json; indent=4" -X POST http://localhost:8000/users/1/wishlist
 ```
 
 Returns: ```WishlistItem```
@@ -160,7 +164,7 @@ Carts are very similar in behavior with the wish lists, but they also have "amou
 
 Getting list of items in the cart:
 ```
-curl -u my_username:my_ultra_hard_password -H "Content-Type: application/json; indent=4" -X GET http://localhost:8000/users/1/cart
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/1/cart
 ```
 
 Returns: ```CartItem[]```
@@ -175,7 +179,7 @@ Cart item model has the following fields:
 
 Adding a new item to the cart is available by sending POST request with the cart item model in the request body:
 ```
-curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H "Content-Type: application/json; indent=4" -X POST http://localhost:8000/users/1/cart
+curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H "Content-Type: application/json; indent=4" -H "Accept: application/json; indent=4" -X POST http://localhost:8000/users/1/cart
 ```
 
 Returns: ```CartItem```
@@ -197,9 +201,9 @@ Order model contains these fields:
 }
 ```
 
-Example of request:
+Example:
 ```
-curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X POST "http://localhost:8000/order"
+curl -u my_username:my_ultra_hard_password -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -H "Accept: application/json; indent=4" -X POST "http://localhost:8000/order"
 ```
 
 Returns: ```Order```
@@ -210,7 +214,7 @@ The only differences with my implementation of a payment service are that you ne
 
 First of all, get the payment details and link from online shop API. Pass an order ID that you had got from the previous request as a parameter in _/order/<order_id>/pay_:
 ```
-curl -u my_username:my_ultra_hard_password -H "Content-Type: application/json; indent=4" -X GET http://localhost:8000/order/4/pay
+curl -u my_username:my_ultra_hard_password -H "Accept: application/json; indent=4" -X GET http://localhost:8000/order/4/pay
 ```
 
 Returns: `Payment`
@@ -240,9 +244,9 @@ Body of the next request must contain:
 }
 ```
 
-Example of request:
+Example:
 ```
-curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -X POST "http://localhost:8000/webhooks"
+curl -d "@request_data.json" -H 'Content-Type: application/json; indent=4' -H "Accept: application/json; indent=4" -X POST "http://localhost:8000/webhooks"
 ```
 
 Returns: ```Order```
@@ -260,7 +264,7 @@ Body of this request must include:
 }
 ```
 
-More than that, you need to be authenticated to send this kind of request.
+More than that, you need to be authenticated to send this kind of the request.
 
 Example of creating a review:
 ```
@@ -285,16 +289,16 @@ You also may be interested in getting all of the reviews (comments) about a cert
 
 Example of request:
 ```
-curl -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories/top%20clothes/2/reviews
+curl -H "Accept: application/json; indent=4" -X GET http://localhost:8000/categories/top%20clothes/2/reviews
 ```
 
 Returns: ```Review[]```
 
 You also can get the list of reviews made by a certain user accessing the following endpoint: `users/<int:user_id>/reviews`.
 
-Example of request:
+Example:
 ```
-curl -H "Content-Type: application/json" -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/1/reviews
+curl -H "Accept: application/json; indent=4" -X GET http://localhost:8000/users/1/reviews
 ```
 
 Returns: ```Review[]```
