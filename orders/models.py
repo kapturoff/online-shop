@@ -31,7 +31,7 @@ class Order(models.Model):
     mobile_number = models.CharField(max_length=16)
 
     def __str__(self) -> str:
-        return f'{self.customer} {self.created}'
+        return f'{self.customer} {self.final_cost}$'
 
 
 class OrderItem(models.Model):

@@ -38,4 +38,4 @@ class Payment(models.Model):
     '''
 
     def __str__(self) -> str:
-        return f'{self.payment_page_url}'
+        return f'{self.payment_service_id}, {self.order}'
