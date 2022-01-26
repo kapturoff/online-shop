@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/usr/src/app/
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.env
+  db:
+    image: mysql:5.7
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_volume:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: 'online-shop-db'
+      MYSQL_USER: 'online-shop-admin'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+
+volumes:
+  mysql_volume:
