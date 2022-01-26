@@ -6,6 +6,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -41,6 +42,23 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+DEBUG = int(os.environ.get('DEBUG', default=0))
+
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(' ')
+
+DATABASES = {
+    'default': {
+        'ENGINE': os.environ.get('SQL_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.environ.get('SQL_DATABASE', 'online_shop'),
+        'USER': os.environ.get('SQL_USER', 'user'),
+        'PASSWORD': os.environ.get('SQL_PASSWORD', 'password'),
+        'HOST': os.environ.get('SQL_HOST', 'locahost'),
+        'PORT': os.environ.get('SQL_PORT', '3306'),
+    }
+}
 
 ROOT_URLCONF = 'online_shop.urls'
 
