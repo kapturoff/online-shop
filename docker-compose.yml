@@ -16,6 +16,7 @@ services:
       - '3306:3306'
     volumes:
       - mysql_volume:/var/lib/mysql
+      - ./database_init:/docker-entrypoint-initdb.d
     environment:
       MYSQL_DATABASE: 'online-shop-db'
       MYSQL_USER: 'online-shop-admin'
