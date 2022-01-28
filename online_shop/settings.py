@@ -43,21 +43,22 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'foobarbaz')
 
-DEBUG = int(os.environ.get('DEBUG', default=0))
+DEBUG = int(os.environ.get('DEBUG', default=1))
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(' ')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(' ')
 
 DATABASES = {
-    'default': {
-        'ENGINE': os.environ.get('SQL_ENGINE', 'django.db.backends.mysql'),
-        'NAME': os.environ.get('SQL_DATABASE', 'online_shop'),
-        'USER': os.environ.get('SQL_USER', 'user'),
-        'PASSWORD': os.environ.get('SQL_PASSWORD', 'password'),
-        'HOST': os.environ.get('SQL_HOST', 'locahost'),
-        'PORT': os.environ.get('SQL_PORT', '3306'),
-    }
+    'default':
+        {
+            'ENGINE': os.environ.get('SQL_ENGINE', 'django.db.backends.mysql'),
+            'NAME': os.environ.get('SQL_DATABASE', 'online_shop_db'),
+            'USER': os.environ.get('SQL_USER', 'online-shop-admin'),
+            'PASSWORD': os.environ.get('SQL_PASSWORD', 'password'),
+            'HOST': os.environ.get('SQL_HOST', 'localhost'),
+            'PORT': os.environ.get('SQL_PORT', '3306'),
+        }
 }
 
 ROOT_URLCONF = 'online_shop.urls'
