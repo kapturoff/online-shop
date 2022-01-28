@@ -112,8 +112,9 @@ class ProductsTest(APITestCase):
         '''
         Make sure that we can access product details
         '''
+        product_id = self.p1.id
         expected_result = ProductSerializer(self.p1)
-        response = self.client.get('/categories/top%20clothes/1')
+        response = self.client.get(f'/categories/top%20clothes/{product_id}')
 
         self.assertEquals(response.data, expected_result.data)
 
@@ -121,8 +122,9 @@ class ProductsTest(APITestCase):
         '''
         Make sure that we get other result when we asks for another product details
         '''
+        product_id = self.p2.id
         expected_result = ProductSerializer(self.p2)
-        response = self.client.get('/categories/top%20clothes/2')
+        response = self.client.get(f'/categories/top%20clothes/{product_id}')
 
         self.assertEquals(response.data, expected_result.data)
 
@@ -130,7 +132,8 @@ class ProductsTest(APITestCase):
         '''
         Make sure that a returned product has all important fields
         '''
-        response = self.client.get('/categories/top%20clothes/1')
+        product_id = self.p1.id
+        response = self.client.get(f'/categories/top%20clothes/{product_id}')
         data = response.data
 
         self.assertEqual(data['name'], test_data['product 1']['name'])
@@ -183,8 +186,11 @@ class ReviewListTest(APITestCase):
         '''
         Make sure that API returns list of reviews
         '''
+        product_id = self.p1.id
         expected_result = ReviewSerializer([self.r1, self.r2], many=True)
-        response = self.client.get('/categories/top%20clothes/1/reviews')
+        response = self.client.get(
+            f'/categories/top%20clothes/{product_id}/reviews'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_result.data)
@@ -193,8 +199,11 @@ class ReviewListTest(APITestCase):
         '''
         API returns empty list if there are no reviews below product
         '''
+        product_id = self.p2.id
         expected_result = ReviewSerializer([], many=True)
-        response = self.client.get('/categories/top%20clothes/2/reviews')
+        response = self.client.get(
+            f'/categories/top%20clothes/{product_id}/reviews'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_result.data)
@@ -229,26 +238,18 @@ class ReviewCreateTest(APITestCase):
         Ensure that we can create the new review if we are logged in, passing valid
         product ID and providing fields "liked" and "review_text".
         '''
-        review = Review(
-            **test_data['review 1'], author=self.user, product=self.p1
-        )  # Not saving!
-
-        # Because the ID is not being set automatically
-        # if we don't save model to the database, we must set it manually
-        review.id = 1
-        expected_result = ReviewSerializer(review)
+        product_id = self.p1.id
         response = self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review 1'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
         )
 
-        self.assertEqual(expected_result.data, response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Get review from database after request
-        saved_review = Review.objects.get(id=1)
+        saved_review = Review.objects.get()
 
         # Test that the review is now saved in database
         self.assertTrue(saved_review)
@@ -258,26 +259,24 @@ class ReviewCreateTest(APITestCase):
         Ensure that we can create two new reviews in a row if we are logged in, passing valid
         product IDs and providing fields "liked" and "review_text".
         '''
+        product_id = self.p1.id
         self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review 1'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
         )
         self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review 2'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
         )
 
         # Get reviews from database after requests
-        saved_review_1 = Review.objects.get(id=1)
-        saved_review_2 = Review.objects.get(id=2)
+        saved_reviews = Review.objects.all()
 
-        # Test that the reviews are now saved in database
-        self.assertTrue(saved_review_1)
-        self.assertTrue(saved_review_2)
+        self.assertTrue(len(saved_reviews), 2)
 
     def test_create_review_invalid_id(self):
         '''
@@ -303,8 +302,9 @@ class ReviewCreateTest(APITestCase):
         '''
         Test that we cannot create new review without providing "liked" field
         '''
+        product_id = self.p1.id
         response = self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review without liked field'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
@@ -323,8 +323,9 @@ class ReviewCreateTest(APITestCase):
         '''
         Test that we cannot create new review without providing "liked" field
         '''
+        product_id = self.p1.id
         response = self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review without liked field'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
@@ -343,8 +344,9 @@ class ReviewCreateTest(APITestCase):
         '''
         Test that we cannot create new review without providing "review_text" field
         '''
+        product_id = self.p1.id
         response = self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review without caption'],
             format='json',
             HTTP_AUTHORIZATION=self.user_token
@@ -363,8 +365,9 @@ class ReviewCreateTest(APITestCase):
         '''
         Test that we cannot create new review without authorization
         '''
+        product_id = self.p1.id
         response = self.client.post(
-            '/categories/top%20clothes/1/reviews/create',
+            f'/categories/top%20clothes/{product_id}/reviews/create',
             test_data['review 1'],
             format='json',
         )
