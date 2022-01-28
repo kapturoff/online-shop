@@ -6,12 +6,6 @@ from users.serializers import UserSerializer
 from . import models
 
 
-class OrderStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.OrderStatus
-        fields = '__all__'
-
-
 class OrderItemSerializer(serializers.Serializer):
     product = ProductSerializer()
     amount = serializers.IntegerField(max_value=32767, min_value=0)
@@ -19,8 +13,8 @@ class OrderItemSerializer(serializers.Serializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     customer = UserSerializer()
-    status = OrderStatusSerializer(default=1)
     items = OrderItemSerializer(many=True)
+    status = serializers.CharField(source='get_status_display')
 
     def create(data, customer):
         '''

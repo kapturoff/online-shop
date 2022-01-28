@@ -8,7 +8,6 @@ from rest_framework.views import APIView
 from .permissions import IsPaymentOwnerOrAdmin
 from orders.permissions import IsOrderOwnerOrAdmin
 from .models import Order, Payment
-from orders.models import OrderStatus
 from orders.serializers import OrderSerializer
 from .helpers import call_payment_service_api, decrease_products_amount
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
@@ -96,8 +95,8 @@ class PaymentCheck(APIView):
             payment.paid = True
             payment.save()
 
-            # Changes status of order
-            order.status = OrderStatus.objects.get(name='Paid')
+            # Changes status of the order
+            order.status = 'P'  # 'P' - is a choise for status "Paid"
 
             order.save()
             order_serialized = OrderSerializer(order)

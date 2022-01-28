@@ -2,14 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 from products.models import Product
 
-DEFAULT_ORDER_STATUS_ID = 1  # ID of status "Created"
-
-
-class OrderStatus(models.Model):
-    name = models.CharField(max_length=16)
-
-    def __str__(self) -> str:
-        return self.name
+STATUS_CHOICES = [
+        ('C', 'Created'),
+        ('P', 'Paid'),
+        ('O', 'On the way'),
+        ('D', 'Delivered'),
+    ]
 
 
 class Order(models.Model):
@@ -19,9 +17,7 @@ class Order(models.Model):
     )
     final_cost = models.FloatField()
     created = models.DateTimeField(auto_now=True)
-    status = models.ForeignKey(
-        OrderStatus, default=DEFAULT_ORDER_STATUS_ID, on_delete=models.RESTRICT
-    )
+    status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='C')
 
     # TODO: Create seperate models for addresses
     address_to_send = models.CharField(max_length=128)
