@@ -20,20 +20,6 @@ from . import models, serializers
 test_data = {
     'valid order':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
@@ -59,20 +45,6 @@ test_data = {
         },
     'order with no address to send':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
             'last_name': 'Johnson',
@@ -80,20 +52,6 @@ test_data = {
         },
     'order with no phone number':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'first_name': 'Carl',
             'last_name': 'Johnson',
@@ -101,20 +59,6 @@ test_data = {
         },
     'order with no first name':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'last_name': 'Johnson',
@@ -122,20 +66,6 @@ test_data = {
         },
     'order with no last name':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
@@ -143,20 +73,6 @@ test_data = {
         },
     'order with no email':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
@@ -164,20 +80,6 @@ test_data = {
         },
     'order with product that does not exist':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 2
-                    }, {
-                        'product': {
-                            'id': 9999,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
@@ -186,20 +88,6 @@ test_data = {
         },
     'order with the invalid amount of items':
         {
-            'items':
-                [
-                    {
-                        'product': {
-                            'id': 1,
-                        },
-                        'amount': 9999
-                    }, {
-                        'product': {
-                            'id': 2,
-                        },
-                        'amount': 3
-                    }
-                ],
             'address_to_send': 'Russia, Krasnodar',
             'mobile_number': '+12223334455',
             'first_name': 'Carl',
@@ -243,7 +131,6 @@ test_data = {
         },
 }
 
-
 class OrderCreatingTest(APITestCase):
     def setUp(self) -> None:
         self.c1 = Category(**test_data['category'])
@@ -254,9 +141,6 @@ class OrderCreatingTest(APITestCase):
 
         self.p1.save()
         self.p2.save()
-
-        default_order_status = models.OrderStatus(name="Created")
-        default_order_status.save()
 
         self.client.post('/register', test_data['user data 1'], format='json')
 
@@ -271,8 +155,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can create the order if a given data is valid
         '''
         response = self.client.post(
-            '/order',
-            test_data['valid order'],
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -287,7 +186,24 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if we're not authenticated
         '''
         response = self.client.post(
-            '/order', test_data['valid order'], format='json'
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
+            format='json'
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -326,8 +242,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if a given data has got no field named "address"
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with no address to send'],
+            '/order', {
+                **test_data['order with no address to send'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -340,8 +271,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with no phone number'],
+            '/order', {
+                **test_data['order with no phone number'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -354,8 +300,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with no first name'],
+            '/order', {
+                **test_data['order with no first name'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -368,8 +329,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with no last name'],
+            '/order', {
+                **test_data['order with no last name'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -382,8 +358,23 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if a given data has got no field named "mobile_number"
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with no email'],
+            '/order', {
+                **test_data['order with no email'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -396,8 +387,15 @@ class OrderCreatingTest(APITestCase):
         Ensure that we can not create the order if items in given data do not exist
         '''
         response = self.client.post(
-            '/order',
-            test_data['order with product that does not exist'],
+            '/order', {
+                **test_data['order with product that does not exist'], 'items':
+                    [{
+                        'product': {
+                            'id': -1,
+                        },
+                        'amount': 2
+                    }, ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -411,7 +409,24 @@ class OrderCreatingTest(APITestCase):
         '''
         response = self.client.post(
             '/order',
-            test_data['order with the invalid amount of items'],
+
+            {
+                **test_data['order with the invalid amount of items'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 21234341234134
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 312342134
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
@@ -431,9 +446,6 @@ class OrderDetailTest(APITestCase):
         self.p1.save()
         self.p2.save()
 
-        default_order_status = models.OrderStatus(name="Created")
-        default_order_status.save()
-
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
@@ -452,30 +464,71 @@ class OrderDetailTest(APITestCase):
         # reason that I do not fully understand
 
         # Creates two orders from first user
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.o1 = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.o2 = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
         )
 
         # Creates one order from second user
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.o3 = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_2
         )
-
-        self.o1 = models.Order.objects.get(id=1)
-        self.o2 = models.Order.objects.get(id=2)
-        self.o3 = models.Order.objects.get(id=3)
 
         self.client.logout()
 
@@ -483,11 +536,14 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we can get details of an order if we logged in as its owner
         '''
+        order_id = self.o1.data['id']
         response = self.client.get(
-            '/order/1', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{order_id}',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
-        order_model = models.Order.objects.get(id=1)
+        order_model = models.Order.objects.get(id=order_id)
         expected_result = serializers.OrderSerializer(order_model)
 
         self.assertEqual(response.data, expected_result.data)
@@ -496,7 +552,8 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we cannot get details of any order if we logged out
         '''
-        response = self.client.get('/order/1', format='json')
+        order_id = self.o1.data['id']
+        response = self.client.get(f'/order/{order_id}', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
@@ -505,8 +562,11 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we cannot get details of an order we logged in as not its owner
         '''
+        order_id = self.o3.data['id']
         response = self.client.get(
-            '/order/3', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{order_id}',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -516,11 +576,14 @@ class OrderDetailTest(APITestCase):
         '''
         Ensure that we can get any details of an order if we logged in as its owner
         '''
+        order_id = self.o2.data['id']
         response = self.client.get(
-            '/order/3', format='json', HTTP_AUTHORIZATION=self.token_2
+            f'/order/{order_id}',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
-        order_model = models.Order.objects.get(id=3)
+        order_model = models.Order.objects.get(id=order_id)
         expected_result = serializers.OrderSerializer(order_model)
 
         self.assertEqual(response.data, expected_result.data)
