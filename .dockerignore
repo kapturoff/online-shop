@@ -1,3 +1,6 @@
-README.MD
+*.md
 .vscode
 .hypothesis
+Dockerfile
+docker-compose.yml
+env/
