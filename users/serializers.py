@@ -4,13 +4,14 @@ from django.contrib.auth.models import User
 
 
 class CartItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
     product = ProductSerializer()
     amount = serializers.IntegerField(max_value=32767, min_value=0)
 
 
 class WishlistItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
     product = ProductSerializer()
-
 
 class UserSerializer(serializers.ModelSerializer):
     reviews_count = serializers.SerializerMethodField()

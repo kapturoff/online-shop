@@ -38,6 +38,7 @@ class ReviewAuthorSerializer(serializers.Serializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
     product = ProductSerializer()
     author = ReviewAuthorSerializer()
 

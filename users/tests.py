@@ -510,7 +510,6 @@ class CartItemDeleteTest(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['detail'].code, 'not_found')
 
 
 class ReviewDelete(APITestCase):
