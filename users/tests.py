@@ -1,7 +1,6 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
-
 from products.models import Category, Product
 
 test_data = {
@@ -40,12 +39,11 @@ test_data = {
     'review data': {
         'liked': True,
         'review_text': 'Awesome t-shirt!'
-    },
-    'product url': '/categories/top%20clothes/1/reviews/create'
+    }
 }
 
 
-class RegistrationTests(APITestCase):
+class RegistrationTest(APITestCase):
     def test_create_user(self):
         '''
         Ensure we can create a new user
@@ -99,17 +97,17 @@ class RegistrationTests(APITestCase):
 
 class UserDetailsTest(APITestCase):
     def setUp(self):
-        self.client.post('/register', test_data['user data 1'], format='json')
-        self.client.post('/register', test_data['user data 2'], format='json')
+        self.user = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
 
     def test_get_user_details(self):
         '''
         Ensure we can get details of an user's bio
         '''
-        response = self.client.get('/users/1', format='json')
+        response = self.client.get(f'/users/{self.user["id"]}', format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], 1)
         self.assertEqual(response.data['username'], 'test1')
 
 
@@ -117,14 +115,20 @@ class WishlistTest(APITestCase):
     def setUp(self):
         category = Category(name='top clothes')
         category.save()
-        product = Product(**test_data['product data'], category=category)
-        product.save()
 
-        self.client.post('/register', test_data['user data 1'], format='json')
+        self.p1 = Product(**test_data['product data'], category=category)
+        self.p1.save()
+
+        self.user_1 = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
         self.token_1 = self.client.post(
             '/token', test_data['user data 1'], format='json'
         ).data['token']
-        self.client.post('/register', test_data['user data 2'], format='json')
+
+        self.user_2 = self.client.post(
+            '/register', test_data['user data 2'], format='json'
+        ).data
         self.token_2 = self.client.post(
             '/token', test_data['user data 2'], format='json'
         ).data['token']
@@ -134,7 +138,7 @@ class WishlistTest(APITestCase):
         Ensure we can get user's wish list if we logged in as its owner
         '''
         response = self.client.get(
-            '/users/1/wishlist',
+            f'/users/{self.user_1["id"]}/wishlist',
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -147,7 +151,7 @@ class WishlistTest(APITestCase):
         Ensure we cannot get user's wish list if we logged in as not its owner
         '''
         response = self.client.get(
-            '/users/2/wishlist',
+            f'/users/{self.user_2["id"]}/wishlist',
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -160,7 +164,7 @@ class WishlistTest(APITestCase):
         Ensure we can add item to a user's wish list if we logged in as its owner
         '''
         response = self.client.post(
-            '/users/1/wishlist', {'product_id': 1},
+            f'/users/{self.user_1["id"]}/wishlist', {'product_id': self.p1.id},
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -173,7 +177,7 @@ class WishlistTest(APITestCase):
         Ensure we cannot add a not existing item to an user's wish list
         '''
         response = self.client.post(
-            '/users/1/wishlist', {'product_id': 999999},
+            f'/users/{self.user_1["id"]}/wishlist', {'product_id': 999999},
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -186,7 +190,7 @@ class WishlistTest(APITestCase):
         Ensure we get an error if we not provide product_id
         '''
         response = self.client.post(
-            '/users/1/wishlist', {},
+            f'/users/{self.user_1["id"]}/wishlist', {},
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -199,14 +203,20 @@ class CartsTest(APITestCase):
     def setUp(self):
         category = Category(name='top clothes')
         category.save()
-        product = Product(**test_data['product data'], category=category)
-        product.save()
 
-        self.client.post('/register', test_data['user data 1'], format='json')
+        self.p1 = Product(**test_data['product data'], category=category)
+        self.p1.save()
+
+        self.user_1 = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
         self.token_1 = self.client.post(
             '/token', test_data['user data 1'], format='json'
         ).data['token']
-        self.client.post('/register', test_data['user data 2'], format='json')
+
+        self.user_2 = self.client.post(
+            '/register', test_data['user data 2'], format='json'
+        ).data
         self.token_2 = self.client.post(
             '/token', test_data['user data 2'], format='json'
         ).data['token']
@@ -216,7 +226,7 @@ class CartsTest(APITestCase):
         Ensure we can get user's cart if we logged in as its owner
         '''
         response = self.client.get(
-            '/users/1/cart',
+            f'/users/{self.user_1["id"]}/cart',
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -229,7 +239,7 @@ class CartsTest(APITestCase):
         Ensure we cannot get user's cart if we logged in as not its owner
         '''
         response = self.client.get(
-            '/users/2/cart',
+            f'/users/{self.user_2["id"]}/cart',
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -242,8 +252,8 @@ class CartsTest(APITestCase):
         Ensure we can add item to a user's cart if we logged in as its owner
         '''
         response = self.client.post(
-            '/users/1/cart', {
-                'product_id': 1,
+            f'/users/{self.user_1["id"]}/cart', {
+                'product_id': self.p1.id,
                 'amount': 5
             },
             format='json',
@@ -259,7 +269,7 @@ class CartsTest(APITestCase):
         Ensure we cannot add a not existing item to an user's cart
         '''
         response = self.client.post(
-            '/users/1/cart', {
+            f'/users/{self.user_1["id"]}/cart', {
                 'product_id': 999999,
                 'amount': 5
             },
@@ -275,7 +285,7 @@ class CartsTest(APITestCase):
         Ensure we get an error if we not provide product_id
         '''
         response = self.client.post(
-            '/users/1/cart', {'amount': 5},
+            f'/users/{self.user_1["id"]}/cart', {'amount': 5},
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -287,9 +297,8 @@ class CartsTest(APITestCase):
         '''
         Ensure we get an error if we not provide amount
         '''
-
         response = self.client.post(
-            '/users/1/cart', {'product_id': 1},
+            f'/users/{self.user_1["id"]}/cart', {'product_id': self.p1.id},
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
@@ -302,15 +311,20 @@ class WishlistItemDeleteTest(APITestCase):
     def setUp(self):
         category = Category(name='top clothes')
         category.save()
-        product = Product(**test_data['product data'], category=category)
-        product.save()
 
-        self.client.post('/register', test_data['user data 1'], format='json')
+        self.p1 = Product(**test_data['product data'], category=category)
+        self.p1.save()
+
+        self.user_1 = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
         self.token_1 = self.client.post(
             '/token', test_data['user data 1'], format='json'
         ).data['token']
 
-        self.client.post('/register', test_data['user data 2'], format='json')
+        self.user_2 = self.client.post(
+            '/register', test_data['user data 2'], format='json'
+        ).data
         self.token_2 = self.client.post(
             '/token', test_data['user data 2'], format='json'
         ).data['token']
@@ -319,68 +333,85 @@ class WishlistItemDeleteTest(APITestCase):
         '''
         Test that we can delete one item from wishlist
         '''
-        self.client.post(
-            '/users/1/wishlist', {'product_id': 1},
+        wishlist_item = self.client.post(
+            f'/users/{self.user_1["id"]}/wishlist', {
+                'product_id': self.p1.id
+            },
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
-        )  # Adding item to wish list
+        ).data  # Adding item to the wish list
 
         response = self.client.delete(
-            '/users/1/wishlist/1', HTTP_AUTHORIZATION='Token ' + self.token_1
+            f'/users/{self.user_1["id"]}/wishlist/{wishlist_item["id"]}',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no wish list
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
         self.assertFalse(response.data)  # Because it responses with None
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(list(user.wishlist.all()), [])
 
-    def test_delete_multiple_item(self):
+    def test_delete_multiple_items(self):
         '''
         Test that we can delete one item from wishlist
         '''
-        # Add item three times
+        # Add item to the wish list tree times
         for i in range(0, 3):
             self.client.post(
-                '/users/1/wishlist', {'product_id': 1},
+                f'/users/{self.user_1["id"]}/wishlist', {
+                    'product_id': self.p1.id
+                },
+                format='json',
+                HTTP_AUTHORIZATION='Token ' + self.token_1
+            ).data
+
+        wishlist = self.client.get(
+            f'/users/{self.user_1["id"]}/wishlist',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        ).data
+
+        for wishlist_item in wishlist:
+            response = self.client.delete(
+                f'/users/{self.user_1["id"]}/wishlist/{wishlist_item["id"]}',
                 format='json',
                 HTTP_AUTHORIZATION='Token ' + self.token_1
             )
 
-        response_1 = self.client.delete(
-            '/users/1/wishlist/1', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_2 = self.client.delete(
-            '/users/1/wishlist/2', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_3 = self.client.delete(
-            '/users/1/wishlist/3', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+            self.assertFalse(response.data)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no wish list
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
-        self.assertFalse(response_1.data)
-        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_2.data)
-        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_3.data)
-        self.assertEqual(response_3.status_code, status.HTTP_200_OK)
         self.assertEqual(list(user.wishlist.all()), [])
 
     def test_delete_one_item_logged_out(self):
         '''
         Test that we cannot delete anything if we're not authorized
         '''
-        # Adding item to wish list
-        self.client.post(
-            '/users/1/wishlist', {'product_id': 1},
+        wishlist_item = self.client.post(
+            f'/users/{self.user_1["id"]}/wishlist', {
+                'product_id': self.p1.id
+            },
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
+        ).data  # Adding item to the wish list
+
+        response = self.client.delete(
+            f'/users/{self.user_1["id"]}/wishlist/{wishlist_item["id"]}'
         )
 
-        response = self.client.delete('/users/1/wishlist/1')
-
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no wish list
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
@@ -393,7 +424,7 @@ class WishlistItemDeleteTest(APITestCase):
         Test that we cannot delete items that does not exist
         '''
         response = self.client.delete(
-            '/users/1/wishlist/9999',
+            f'/users/{self.user_1["id"]}/wishlist/9999',
             HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
@@ -405,15 +436,20 @@ class CartItemDeleteTest(APITestCase):
     def setUp(self):
         category = Category(name='top clothes')
         category.save()
-        product = Product(**test_data['product data'], category=category)
-        product.save()
 
-        self.client.post('/register', test_data['user data 1'], format='json')
+        self.p1 = Product(**test_data['product data'], category=category)
+        self.p1.save()
+
+        self.user_1 = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
         self.token_1 = self.client.post(
             '/token', test_data['user data 1'], format='json'
         ).data['token']
 
-        self.client.post('/register', test_data['user data 2'], format='json')
+        self.user_2 = self.client.post(
+            '/register', test_data['user data 2'], format='json'
+        ).data
         self.token_2 = self.client.post(
             '/token', test_data['user data 2'], format='json'
         ).data['token']
@@ -422,78 +458,89 @@ class CartItemDeleteTest(APITestCase):
         '''
         Test that we can delete one item from cart
         '''
-        # Add item to cart
-        self.client.post(
-            '/users/1/cart', {
-                'product_id': 1,
-                'amount': 2
+        cart_item = self.client.post(
+            f'/users/{self.user_1["id"]}/cart', {
+                'product_id': self.p1.id,
+                'amount': 1
             },
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+        ).data  # Adding items to the cart
 
         response = self.client.delete(
-            '/users/1/cart/1', HTTP_AUTHORIZATION='Token ' + self.token_1
+            f'/users/{self.user_1["id"]}/cart/{cart_item["id"]}',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no cart
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
         self.assertFalse(response.data)  # Because it responses with None
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(list(user.cart.all()), [])
 
-    def test_delete_multiple_item(self):
+    def test_delete_multiple_items(self):
         '''
         Test that we can delete one item from cart
         '''
-        # Add item to cart three times
-        for _ in range(0, 3):
+        # Add item to the cart three times
+        for i in range(0, 3):
             self.client.post(
-                '/users/1/cart', {
-                    'product_id': 1,
-                    'amount': 2
+                f'/users/{self.user_1["id"]}/cart', {
+                    'product_id': self.p1.id,
+                    'amount': 1
                 },
+                format='json',
+                HTTP_AUTHORIZATION='Token ' + self.token_1
+            ).data
+
+        cart = self.client.get(
+            f'/users/{self.user_1["id"]}/cart',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        ).data
+
+        for cart_item in cart:
+            response = self.client.delete(
+                f'/users/{self.user_1["id"]}/cart/{cart_item["id"]}',
                 format='json',
                 HTTP_AUTHORIZATION='Token ' + self.token_1
             )
 
-        response_1 = self.client.delete(
-            '/users/1/cart/1', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_2 = self.client.delete(
-            '/users/1/cart/2', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_3 = self.client.delete(
-            '/users/1/cart/3', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+            self.assertFalse(response.data)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no cart
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
-        self.assertFalse(response_1.data)
-        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_2.data)
-        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_3.data)
-        self.assertEqual(response_3.status_code, status.HTTP_200_OK)
         self.assertEqual(list(user.cart.all()), [])
 
     def test_delete_one_item_logged_out(self):
         '''
         Test that we cannot delete anything if we're not authorized
         '''
-        # Add item to cart
-        self.client.post(
-            '/users/1/cart', {
-                'product_id': 1,
-                'amount': 2
+        # Adding item to the cart
+        cart_item = self.client.post(
+            f'/users/{self.user_1["id"]}/cart', {
+                'product_id': self.p1.id,
+                'amount': 1,
             },
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
+        ).data
+
+        response = self.client.delete(
+            f'/users/{self.user_1["id"]}/cart/{cart_item["id"]}'
         )
 
-        response = self.client.delete('/users/1/cart/1')
-
-        user = User.objects.get(id=1)
+        # We need to get user from database and not use already
+        # gotten user from self.user_1, because it has no cart
+        # (because this list is unnecessary right after registration)
+        user = User.objects.get(id=self.user_1['id'])
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
@@ -506,25 +553,32 @@ class CartItemDeleteTest(APITestCase):
         Test that we cannot delete items that does not exist
         '''
         response = self.client.delete(
-            '/users/1/cart/9999', HTTP_AUTHORIZATION='Token ' + self.token_1
+            f'/users/{self.user_1["id"]}/cart/9999',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'].code, 'not_found')
 
 
 class ReviewDelete(APITestCase):
     def setUp(self):
-        category = Category(name='top clothes')
-        category.save()
-        product = Product(**test_data['product data'], category=category)
-        product.save()
+        self.category = Category(name='top clothes')
+        self.category.save()
 
-        self.client.post('/register', test_data['user data 1'], format='json')
+        self.p1 = Product(**test_data['product data'], category=self.category)
+        self.p1.save()
+
+        self.user_1 = self.client.post(
+            '/register', test_data['user data 1'], format='json'
+        ).data
         self.token_1 = self.client.post(
             '/token', test_data['user data 1'], format='json'
         ).data['token']
 
-        self.client.post('/register', test_data['user data 2'], format='json')
+        self.user_2 = self.client.post(
+            '/register', test_data['user data 2'], format='json'
+        ).data
         self.token_2 = self.client.post(
             '/token', test_data['user data 2'], format='json'
         ).data['token']
@@ -534,80 +588,82 @@ class ReviewDelete(APITestCase):
         Test that we can delete one review
         '''
         # Add a new review
-        self.client.post(
-            test_data['product url'],
+        review = self.client.post(
+            f'/categories/{self.category.name}/{self.p1.id}/reviews/create',
             test_data['review data'],
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+        ).data
 
         # Delete a just created review
         response = self.client.delete(
-            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_1
+            f'/users/{self.user_1["id"]}/reviews/{review["id"]}',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
         self.assertFalse(response.data)  # Because it responses with None
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check that there's no review left made by this user
-        reviews = self.client.get('/users/1/reviews').data
+        reviews = self.client.get(f'/users/{self.user_1["id"]}/reviews').data
         self.assertEqual(reviews, [])
 
-    def test_delete_multiple_review(self):
+    def test_delete_multiple_reviews(self):
         '''
         Test that we can delete multiple reviews
         '''
         # Add review three times
         for _ in range(0, 3):
             self.client.post(
-                test_data['product url'],
+                f'/categories/{self.category.name}/{self.p1.id}/reviews/create',
                 test_data['review data'],
                 format='json',
                 HTTP_AUTHORIZATION='Token ' + self.token_1
             )
 
         # Delete all the created reviews
-        response_1 = self.client.delete(
-            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_2 = self.client.delete(
-            '/users/1/reviews/2', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
-        response_3 = self.client.delete(
-            '/users/1/reviews/3', HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+        reviews = self.client.get(
+            f'/users/{self.user_1["id"]}/reviews',
+            format='json',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
+        ).data
 
-        self.assertFalse(response_1.data)
-        self.assertEqual(response_1.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_2.data)
-        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
-        self.assertFalse(response_3.data)
-        self.assertEqual(response_3.status_code, status.HTTP_200_OK)
+        for review in reviews:
+            response = self.client.delete(
+                f'/users/{self.user_1["id"]}/reviews/{review["id"]}',
+                format='json',
+                HTTP_AUTHORIZATION='Token ' + self.token_1
+            )
+
+            self.assertFalse(response.data)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check that there's no review left made by this user
-        reviews = self.client.get('/users/1/reviews').data
+        reviews = self.client.get(f'/users/{self.user_1["id"]}/reviews').data
         self.assertEqual(reviews, [])
 
     def test_delete_one_review_logged_out(self):
         '''
         Test that we cannot delete anything if we're not authorized
         '''
-        # Create a new review
-        self.client.post(
-            test_data['product url'],
+        # Add a new review
+        review = self.client.post(
+            f'/categories/{self.category.name}/{self.p1.id}/reviews/create',
             test_data['review data'],
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+        ).data
 
         # Remove it
-        response = self.client.delete('/users/1/reviews/1')
+        response = self.client.delete(
+            f'/users/{self.user_1["id"]}/reviews/{review["id"]}'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
 
         # Check that there's only one review left made by this user
-        reviews = self.client.get('/users/1/reviews').data
+        reviews = self.client.get(f'/users/{self.user_1["id"]}/reviews').data
         self.assertEqual(len(reviews), 1)
 
     def test_delete_review_that_does_not_exist(self):
@@ -615,32 +671,34 @@ class ReviewDelete(APITestCase):
         Test that we cannot delete reviews that does not exist
         '''
         response = self.client.delete(
-            '/users/1/reviews/9999', HTTP_AUTHORIZATION='Token ' + self.token_1
+            f'/users/{self.user_1["id"]}/cart/9999',
+            HTTP_AUTHORIZATION='Token ' + self.token_1
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['detail'].code, 'permission_denied')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'].code, 'not_found')
 
     def test_delete_review_by_other_user(self):
         '''
         Test that we cannot delete reviews that were made by other user
         '''
         # Add a new review
-        self.client.post(
-            test_data['product url'],
+        review = self.client.post(
+            f'/categories/{self.category.name}/{self.p1.id}/reviews/create',
             test_data['review data'],
             format='json',
             HTTP_AUTHORIZATION='Token ' + self.token_1
-        )
+        ).data
 
         # Trying to delete a just created review
         response = self.client.delete(
-            '/users/1/reviews/1', HTTP_AUTHORIZATION='Token ' + self.token_2
+            f'/users/{self.user_1["id"]}/reviews/{review["id"]}',
+            HTTP_AUTHORIZATION='Token ' + self.token_2
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'].code, 'permission_denied')
 
         # Check that there's only one review left made by this user
-        reviews = self.client.get('/users/1/reviews').data
+        reviews = self.client.get(f'/users/{self.user_1["id"]}/reviews').data
         self.assertEqual(len(reviews), 1)
