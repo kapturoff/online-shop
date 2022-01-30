@@ -15,7 +15,7 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
 from products.models import Category, Product
-from orders.models import Order, OrderStatus
+from orders.models import Order
 from . import models, serializers
 
 test_data = {
@@ -126,9 +126,6 @@ class PaymentURLTest(APITestCase):
         self.p1.save()
         self.p2.save()
 
-        default_order_status = OrderStatus(name='Created')
-        default_order_status.save()
-
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
@@ -142,23 +139,40 @@ class PaymentURLTest(APITestCase):
             '/token', test_data['user data 2'], format='json'
         ).data['token']
 
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.order = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
-        )
+        ).data
 
     def test_get_payment_url(self):
         '''
         Ensure that we can get an payment URL of the order we've created
         '''
         response = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
-        order = models.Payment.objects.get(id=1)
-        expected_result = serializers.PaymentSerializer(order)
+        payment = models.Payment.objects.get()
+        expected_result = serializers.PaymentSerializer(payment)
 
         self.assertEquals(response.data, expected_result.data)
 
@@ -167,7 +181,9 @@ class PaymentURLTest(APITestCase):
         Ensure that we cannot get payment URL if we're not logged in as an order creator
         '''
         response = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_2
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_2
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -178,13 +194,19 @@ class PaymentURLTest(APITestCase):
         Ensure that payment ID does not change if we try to get URL more than one time
         '''
         first_response = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
         second_response = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
         third_response = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         )
 
         self.assertEqual(first_response.data, second_response.data)
@@ -194,7 +216,9 @@ class PaymentURLTest(APITestCase):
         '''
         Ensure that payment URL cannot be gotten if we're out logged out
         '''
-        response = self.client.get('/order/1/pay', format='json')
+        response = self.client.get(
+            f'/order/{self.order["id"]}/pay', format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'].code, 'not_authenticated')
@@ -222,9 +246,6 @@ class FakePaymentServiceTest(APITestCase):
         self.p1.save()
         self.p2.save()
 
-        default_order_status = OrderStatus(name='Created')
-        default_order_status.save()
-
         self.client.post('/register', test_data['user data 1'], format='json')
         self.client.post('/register', test_data['user data 2'], format='json')
 
@@ -238,12 +259,27 @@ class FakePaymentServiceTest(APITestCase):
             '/token', test_data['user data 2'], format='json'
         ).data['token']
 
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.order = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
-        )
+        ).data
 
     def test_get_payment_page(self):
         '''
@@ -251,7 +287,9 @@ class FakePaymentServiceTest(APITestCase):
         '''
         # Getting payment ID for this purchase
         purchase = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         ).data
         response = self.client.get(
             purchase['payment_page_url'], HTTP_AUTHORIZATION=self.token_1
@@ -259,7 +297,7 @@ class FakePaymentServiceTest(APITestCase):
 
         self.assertEquals(
             response.data['text'],
-            'Congrats, you are on the payment page! Since we do not use any real payment service, you should send post request to /webhooks by yourself. Use data that you receive when you achieve /order/1/pay endpoint for it.'
+            f'Congrats, you are on the payment page! Since we do not use any real payment service, you should send post request to /webhooks by yourself. Use data that you receive when you achieve /order/{self.order["id"]}/pay endpoint for it.'
         )
 
     def test_get_payment_page_for_random_order(self):
@@ -274,6 +312,20 @@ class FakePaymentServiceTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'].code, 'permission_denied')
 
+    def test_get_payment_page_logout(self):
+        '''
+        Ensure that we cannot access the payment page if we're logged out
+        '''
+        purchase = self.client.get(
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
+        ).data
+        response = self.client.get(purchase['payment_page_url'])
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'].code, 'not_authenticated')
+
 
 class PaymentCheckTest(APITestCase):
     def setUp(self) -> None:
@@ -286,12 +338,6 @@ class PaymentCheckTest(APITestCase):
         self.p1.save()
         self.p2.save()
 
-        default_order_status = OrderStatus(name='Created')
-        default_order_status.save()
-
-        paid_order_status = OrderStatus(name='Paid')
-        paid_order_status.save()
-
         self.client.post('/register', test_data['user data 1'], format='json')
 
         # Generates a token for only one user and stores it in the class
@@ -300,15 +346,27 @@ class PaymentCheckTest(APITestCase):
             '/token', test_data['user data 1'], format='json'
         ).data['token']
 
-        self.client.post(
-            '/order',
-            test_data['valid order'],
+        self.order = self.client.post(
+            '/order', {
+                **test_data['valid order'], 'items':
+                    [
+                        {
+                            'product': {
+                                'id': self.p1.id,
+                            },
+                            'amount': 2
+                        },
+                        {
+                            'product': {
+                                'id': self.p2.id
+                            },
+                            'amount': 3
+                        },
+                    ]
+            },
             format='json',
             HTTP_AUTHORIZATION=self.token_1
-        )
-
-    def get_payment_from_database(self, id):
-        return models.Payment.objects.get(id=id)
+        ).data
 
     def test_order_can_be_paid(self):
         '''
@@ -316,7 +374,9 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
@@ -334,11 +394,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was changed
-        self.assertEquals(order.status.name, 'Paid')
+        self.assertEquals(order.status, 'P')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -353,7 +413,7 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Checks if the payment changed its status
-        self.assertTrue(self.get_payment_from_database(1).paid)
+        self.assertTrue(models.Payment.objects.get().paid)
 
     def test_not_successful_pay(self):
         '''
@@ -361,7 +421,9 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay',
+            format='json',
+            HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
@@ -379,11 +441,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -395,8 +457,9 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data[0].code, 'invalid')
@@ -406,9 +469,10 @@ class PaymentCheckTest(APITestCase):
         '''
         Ensure that nothing happens if we provide wrong payment service ID in the request
         '''
+        payment_service_id = 'random_payment_service_id'
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
 
@@ -419,17 +483,17 @@ class PaymentCheckTest(APITestCase):
                 'metadata': {
                     'secret_key': secret_key,
                 },
-                'id': 'random-payment-service-id',
+                'id': payment_service_id,
             },
             format='json'
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -441,14 +505,15 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'].code, 'not_found')
         self.assertEqual(
             response.data['detail'],
-            'Payment for with ID random-payment-service-id does not exist.'
+            f'Payment for with ID {payment_service_id} does not exist.'
         )
 
     def test_invalid_secret_key(self):
@@ -457,7 +522,7 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         payment_id = payment['payment_service_id']
 
@@ -474,11 +539,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -490,8 +555,9 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data[0].code, 'invalid')
@@ -503,7 +569,7 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
@@ -521,11 +587,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -537,8 +603,9 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data[0].code, 'invalid')
@@ -552,7 +619,7 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
 
@@ -568,11 +635,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -584,8 +651,9 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data[0].code, 'invalid')
@@ -599,7 +667,7 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         payment_id = payment['payment_service_id']
 
@@ -614,11 +682,11 @@ class PaymentCheckTest(APITestCase):
         )
 
         # Gets order details from database for future tests
-        order = Order.objects.get(id=1)
+        order = Order.objects.get()
         order_items = order.items.all()
 
         # Checks if order status was not changed
-        self.assertEquals(order.status.name, 'Created')
+        self.assertEquals(order.status, 'C')
 
         # Checks that counts of products decreased after payment
         self.assertEquals(
@@ -630,8 +698,9 @@ class PaymentCheckTest(APITestCase):
             test_data['product 2']['amount_remaining']
         )
 
-        # Checks if the payment was not deleted
-        self.get_payment_from_database(1)
+        # Checks if the payment was not deleted.
+        # If thee's no payment, it throws error and test does not pass
+        models.Payment.objects.get()
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data[0].code, 'invalid')
@@ -645,7 +714,7 @@ class PaymentCheckTest(APITestCase):
         '''
         # Getting payment service ID for this purchase
         payment = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         ).data
         secret_key = payment['secret_key']
         payment_id = payment['payment_service_id']
@@ -663,7 +732,7 @@ class PaymentCheckTest(APITestCase):
         )
 
         response1 = self.client.get(
-            '/order/1/pay', format='json', HTTP_AUTHORIZATION=self.token_1
+            f'/order/{self.order["id"]}/pay', format='json', HTTP_AUTHORIZATION=self.token_1
         )
         self.assertEqual(
             response1.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
