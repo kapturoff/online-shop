@@ -36,3 +36,15 @@ This step is going to look like [this](https://user-images.githubusercontent.com
 8. Check if the building went well by visiting admin page via your browser: http://localhost:8000
 
 Now you can access the online shop API, for example, using curl.
+
+## Additionals
+
+### Tests
+
+If you want to run tests, you need use this command:
+```
+> docker-compose exec web python manage.py test
+```
+
+This is usually quite a long process (Django creates the new Database from scratch, makes the migrations as it's a real DB and only then runs the tests). 
+You can use `--keepdb` flag when running this command if you want to run tests more than one time - using of this flag will significantly speed up running of the tests, because django test engine will not recreate database every single time you run the tests.
