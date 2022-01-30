@@ -1,4 +1,4 @@
-from orders.models import Order 
+from orders.models import Order
 from .models import Payment
 from .serializers import PaymentSerializer
 from rest_framework.exceptions import APIException, ValidationError
@@ -29,7 +29,7 @@ def call_payment_service_api(order_id):
         '''
 
         order = Order.objects.get(id=order_id)
-        if order.status.name != 'Created':
+        if order.status != 'C':  # C is a status choice for status "Created". See orders/models.pys
             raise APIException('This order is already paid.')
 
         payment = PaymentSerializer.create(order_id)
