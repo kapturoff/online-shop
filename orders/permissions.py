@@ -7,7 +7,7 @@ class IsOrderOwnerOrAdmin(BasePermission):
         try:
             order_id = view.kwargs['order_id']
             order = Order.objects.get(id=order_id)
-            return bool(order.customer.id is request.user.id
+            return bool(order.customer.id == request.user.id
                        ) or bool(request.user.is_staff)
         except Exception as e:
             return False
